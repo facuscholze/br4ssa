@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import { CustomCursor } from "@/components/motion/custom-cursor";
 import { Toaster } from "@/components/ui/sonner";
-import { MEDIA, MENU_TABS, REVIEWS, SITE, STATS } from "@/lib/data";
+import { MEDIA, MENU_TABS, REVIEWS, SITE, STATS, withBasePath } from "@/lib/data";
 
 const fraunces = Fraunces({
   variable: "--font-display",
@@ -76,8 +76,8 @@ export const metadata: Metadata = {
     images: [MEDIA.ogImage.src],
   },
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+    icon: [{ url: withBasePath("/icon.svg"), type: "image/svg+xml" }],
+    apple: [{ url: withBasePath("/apple-touch-icon.png"), sizes: "180x180" }],
   },
 };
 

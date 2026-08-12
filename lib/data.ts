@@ -7,6 +7,12 @@ import type {
   Stat,
 } from "@/lib/types";
 
+// GitHub Pages serves this repo from /JyF — every asset path must carry that
+// prefix since this Next.js version does not auto-prepend basePath to raw
+// src strings (see node_modules/next/dist/docs/.../basePath.md).
+export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+export const withBasePath = (path: string) => `${BASE_PATH}${path}`;
+
 export const SITE = {
   name: "Brasa",
   tagline: "Parrilla & Cocina de Autor",
@@ -17,18 +23,18 @@ export const SITE = {
   whatsapp: "5491112345678",
   email: "contacto@restaurante.com",
   hours: "Lunes a Domingo, 12:00 a 00:00",
-  url: "https://brasa-parrilla.example.com",
+  url: "https://facuscholze.github.io/JyF",
 };
 
 // Local, downloaded media. Source files live in public/images and public/video.
 export const MEDIA = {
-  heroBackground: "/images/hero-grill-flames.jpg",
-  heroVideo: "/video/hero-embers.mp4",
-  about: "/images/about-parrillero-asado.jpg",
-  reservation: "/images/reservation-candlelit-table.jpg",
+  heroBackground: withBasePath("/images/hero-grill-flames.jpg"),
+  heroVideo: withBasePath("/video/hero-embers.mp4"),
+  about: withBasePath("/images/about-parrillero-asado.jpg"),
+  reservation: withBasePath("/images/reservation-candlelit-table.jpg"),
   /* Generated via scripts/gen-assets.mjs (attention-crop of the hero photo)
      — the 1200x630 size Twitter/Facebook/WhatsApp expect for a full-bleed card. */
-  ogImage: { src: "/images/og-cover.jpg", width: 1200, height: 630 },
+  ogImage: { src: withBasePath("/images/og-cover.jpg"), width: 1200, height: 630 },
 };
 
 export const NAV_LINKS: NavLink[] = [
@@ -51,21 +57,21 @@ export const FEATURED_DISHES: FeaturedDish[] = [
     name: "Bife de Chorizo",
     tag: "Parrilla",
     description: "Punto justo, sal de campo, chimichurri de la casa.",
-    image: "/images/dish-bife-de-chorizo.jpg",
+    image: withBasePath("/images/dish-bife-de-chorizo.jpg"),
   },
   {
     id: "asado-de-tira",
     name: "Asado de Tira",
     tag: "Parrilla",
     description: "Cocción lenta a fuego de quebracho, tres horas de brasa.",
-    image: "/images/dish-asado-de-tira.jpg",
+    image: withBasePath("/images/dish-asado-de-tira.jpg"),
   },
   {
     id: "tiramisu",
     name: "Tiramisú",
     tag: "Postre",
     description: "Receta de la nonna, mascarpone y café recién molido.",
-    image: "/images/dish-tiramisu.jpg",
+    image: withBasePath("/images/dish-tiramisu.jpg"),
   },
 ];
 
@@ -168,42 +174,42 @@ export const MENU_TABS: MenuTab[] = [
 export const GALLERY_IMAGES: GalleryImage[] = [
   {
     id: "postre-casa",
-    src: "/images/gallery-postre-casa.jpg",
+    src: withBasePath("/images/gallery-postre-casa.jpg"),
     alt: "Postre de la casa",
     width: 800,
     height: 1200,
   },
   {
     id: "corte-premium",
-    src: "/images/gallery-corte-premium.jpg",
+    src: withBasePath("/images/gallery-corte-premium.jpg"),
     alt: "Corte premium en la parrilla",
     width: 800,
     height: 1198,
   },
   {
     id: "postre-gourmet",
-    src: "/images/gallery-postre-gourmet.jpg",
+    src: withBasePath("/images/gallery-postre-gourmet.jpg"),
     alt: "Postre gourmet",
     width: 800,
     height: 1200,
   },
   {
     id: "achuras",
-    src: "/images/gallery-achuras.jpg",
+    src: withBasePath("/images/gallery-achuras.jpg"),
     alt: "Achuras a la parrilla",
     width: 800,
     height: 533,
   },
   {
     id: "carnes-premium",
-    src: "/images/gallery-carnes-premium.jpg",
+    src: withBasePath("/images/gallery-carnes-premium.jpg"),
     alt: "Carnes premium",
     width: 800,
     height: 1198,
   },
   {
     id: "tiramisu-casero",
-    src: "/images/gallery-tiramisu-casero.jpg",
+    src: withBasePath("/images/gallery-tiramisu-casero.jpg"),
     alt: "Tiramisú casero",
     width: 800,
     height: 1422,
