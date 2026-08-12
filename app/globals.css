@@ -1,0 +1,350 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-display);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Brand-specific tokens (ember & charcoal identity) */
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-smoke: var(--smoke);
+  --color-smoke-line: var(--smoke-line);
+  --color-bone: var(--bone);
+  --color-bone-dim: var(--bone-dim);
+  --color-ember: var(--ember);
+  --color-ember-hot: var(--ember-hot);
+  --color-gold: var(--gold);
+  --color-wine: var(--wine);
+  --color-on-media: var(--on-media);
+  --color-on-media-dim: var(--on-media-dim);
+  --color-on-media-line: var(--on-media-line);
+
+  /* Shared brand easing curve — mirrors EASE_CSS in lib/motion.ts. Keep both in sync. */
+  --ease-brand: cubic-bezier(.22,.61,.36,1);
+}
+
+/* Text drawn over photography and dark scrims. Fixed in both themes on purpose —
+   the media underneath does not invert, so these must not either. */
+:root,
+.dark {
+  --on-media: #f1e9dd;
+  --on-media-dim: #b9ac9b;
+  --on-media-line: #3a322b;
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Light theme — warm parchment, ember accents kept for contrast */
+  --ink: #1c1611;
+  --ink-soft: #ede4d6;
+  --smoke: #ffffff;
+  --smoke-line: #e4d9c8;
+  --bone: #1c1611;
+  --bone-dim: #6b5d4f;
+  --ember: #d14710;
+  --ember-hot: #e8551d;
+  /* Darkened from #9c7523 so small gold text clears 4.5:1 on the parchment bg. */
+  --gold: #7d5c17;
+  --wine: #4a1512;
+
+  --background: #fbf7f0;
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+  --primary: var(--ember);
+  --primary-foreground: #fff7ef;
+  --secondary: #f1e8d9;
+  --secondary-foreground: var(--ink);
+  --muted: #f1e8d9;
+  --muted-foreground: var(--bone-dim);
+  --accent: #f1e8d9;
+  --accent-foreground: var(--ink);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: var(--smoke-line);
+  --input: var(--smoke-line);
+  --ring: var(--ember);
+  --chart-1: var(--ember);
+  --chart-2: var(--gold);
+  --chart-3: var(--wine);
+  --chart-4: #6b5d4f;
+  --chart-5: #1c1611;
+  --sidebar: #ffffff;
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ember);
+  --sidebar-primary-foreground: #fff7ef;
+  --sidebar-accent: #f1e8d9;
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--smoke-line);
+  --sidebar-ring: var(--ember);
+}
+
+.dark {
+  /* Dark theme — the brand's native charcoal & live-coal palette */
+  --ink: #14100d;
+  --ink-soft: #1c1611;
+  --smoke: #241e19;
+  --smoke-line: #3a322b;
+  --bone: #f1e9dd;
+  --bone-dim: #b9ac9b;
+  --ember: #e8551d;
+  --ember-hot: #ff7a3d;
+  --gold: #c9a24b;
+  --wine: #4a1512;
+
+  --background: var(--ink);
+  --foreground: var(--bone);
+  --card: var(--smoke);
+  --card-foreground: var(--bone);
+  --popover: var(--smoke);
+  --popover-foreground: var(--bone);
+  --primary: var(--ember);
+  --primary-foreground: #140a05;
+  --secondary: var(--smoke);
+  --secondary-foreground: var(--bone);
+  --muted: var(--ink-soft);
+  --muted-foreground: var(--bone-dim);
+  --accent: var(--smoke);
+  --accent-foreground: var(--bone);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: var(--smoke-line);
+  --input: var(--smoke-line);
+  --ring: var(--ember);
+  --chart-1: var(--ember);
+  --chart-2: var(--gold);
+  --chart-3: var(--ember-hot);
+  --chart-4: var(--bone-dim);
+  --chart-5: var(--bone);
+  --sidebar: var(--ink-soft);
+  --sidebar-foreground: var(--bone);
+  --sidebar-primary: var(--ember);
+  --sidebar-primary-foreground: #140a05;
+  --sidebar-accent: var(--smoke);
+  --sidebar-accent-foreground: var(--bone);
+  --sidebar-border: var(--smoke-line);
+  --sidebar-ring: var(--ember);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans scroll-smooth;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+  }
+}
+
+/* Native cursor is hidden only once CustomCursor confirms a fine (mouse)
+   pointer is present client-side, so touch devices and SSR keep the default. */
+html.custom-cursor-active,
+html.custom-cursor-active * {
+  cursor: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Exempt: simple linear ticker, low vestibular risk, kept always-on by
+     product decision even for users who prefer reduced motion. */
+  .marquee-track {
+    animation-duration: 38s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* One heading scale for every section title on the page. */
+  .section-title {
+    font-size: clamp(30px, 4.2vw, 46px);
+    line-height: 1.1;
+  }
+
+  /* signature ember divider — a slow-breathing coal line between sections */
+  .ember-rule {
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--ember) 20%,
+      var(--gold) 50%,
+      var(--ember) 80%,
+      transparent
+    );
+    background-size: 200% 100%;
+    opacity: 0.55;
+    animation: ember-breathe 6s var(--ease-brand) infinite;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 24px color-mix(in oklch, var(--ember-hot) 45%, transparent);
+    animation: ember-glow 3.2s var(--ease-brand) infinite;
+  }
+
+  /* box-shadow counterpart of .text-glow — same rhythm/palette, for solid CTAs */
+  .glow-ember {
+    animation: ember-glow-ring 3.2s var(--ease-brand) infinite;
+  }
+}
+
+@keyframes ember-breathe {
+  0%,
+  100% {
+    background-position: 0% 0;
+    opacity: 0.35;
+  }
+  50% {
+    background-position: 100% 0;
+    opacity: 0.75;
+  }
+}
+
+@keyframes ember-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 18px color-mix(in oklch, var(--ember-hot) 30%, transparent);
+  }
+  50% {
+    text-shadow: 0 0 34px color-mix(in oklch, var(--ember-hot) 55%, transparent);
+  }
+}
+
+@keyframes ember-glow-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 18px 0 color-mix(in oklch, var(--ember-hot) 30%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 34px 4px color-mix(in oklch, var(--ember-hot) 55%, transparent);
+  }
+}
+
+@keyframes hero-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Per-word hero reveal. Pure CSS so the LCP headline is never gated on hydration. */
+@keyframes hero-word {
+  from {
+    opacity: 0;
+    transform: translateY(0.55em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cue-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Ticker band: the track renders its content 5x (one track can be narrower
+   than very wide/4K viewports, and too few copies leave a visible gap near
+   the loop point), so -20% is one full loop. */
+@keyframes marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-20%, 0, 0);
+  }
+}
+
+@keyframes flame-flicker {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.06, 0.96) rotate(-3deg);
+  }
+  50% {
+    transform: scale(0.97, 1.05) rotate(2deg);
+  }
+  75% {
+    transform: scale(1.04, 0.98) rotate(-1deg);
+  }
+}
