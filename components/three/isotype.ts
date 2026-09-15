@@ -15,6 +15,7 @@ let cached: Float32Array | null = null;
 /** Draws the isotype onto a 2D canvas mask and returns the pixel data. */
 function sampleFlameMask(): { data: Uint8ClampedArray; size: number } | null {
   try {
+    if (typeof document === "undefined") return null;
     const canvas = document.createElement("canvas");
     canvas.width = SAMPLE_SIZE;
     canvas.height = SAMPLE_SIZE;
@@ -47,18 +48,18 @@ function fallbackBrasa(count: number): Float32Array {
 }
 
 /** Returns `count` 2D sample points (x,y pairs in 512px isotype space). */
-export function getBrasaTargets(count = 1100): Float32Array {
-  if (cached) return cached;
+export function getBrasaTargets(count = 1400): Float32Array {
+  if (cached && cached.length >= count * 2) return cached.slice(0, count * 2);
 
   let pixels: Float32Array | null = null;
   const mask = sampleFlameMask();
   if (mask) {
     const { data, size } = mask;
-    const step = 4;
+    const step = 3;
     const candidates: number[] = [];
     for (let y = 0; y < size; y += step) {
       for (let x = 0; x < size; x += step) {
-        if (data[(y * size + x) * 4 + 3] > 120) candidates.push(x, y);
+        if (data[(y * size + x) * 4 + 3] > 110) candidates.push(x, y);
       }
     }
     if (candidates.length / 2 >= count) {
@@ -93,8 +94,10 @@ export type FlameProfile = {
 
 let profileCache: FlameProfile | null = null;
 
-export function getFlameProfile(rows = 56, height = 2.3): FlameProfile {
-  if (profileCache) return profileCache;
+export function getFlameProfile(rows = 80, height = 2.3): FlameProfile {
+  if (profileCache && profileCache.rows === rows && profileCache.height === height) {
+    return profileCache;
+  }
 
   let center: Float32Array | null = null;
   let halfWidth: Float32Array | null = null;
@@ -146,10 +149,11 @@ export function getFlameProfile(rows = 56, height = 2.3): FlameProfile {
           halfWidth[i] = ((right - left) / 2) * k;
         }
       }
-      // 3-tap smoothing so the lathe outline is silky, not jaggly
+      // 5-tap Gaussian-like smoothing so the lathe outline is silky, not jaggly
       const smooth = (arr: Float32Array) => {
-        for (let i = 1; i < rows - 1; i++) {
-          arr[i] = (arr[i - 1] + arr[i] * 2 + arr[i + 1]) / 4;
+        const copy = new Float32Array(arr);
+        for (let i = 2; i < rows - 2; i++) {
+          arr[i] = (copy[i - 2] + copy[i - 1] * 4 + copy[i] * 6 + copy[i + 1] * 4 + copy[i + 2]) / 16;
         }
       };
       smooth(center);
@@ -202,6 +206,6 @@ export function targetsToWorld(
   for (let i = 0; i < count; i++) {
     out[i * 3] = (pixels[i * 2] - cx) * k;
     out[i * 3 + 1] = (cy - pixels[i * 2 + 1]) * k;
-    out[i * 3 + 2] = (Math.random() - 0.5) * 0.18;
+    out[i * 3 + 2] = (Math.random() - 0.5) * 0.22;
   }
 }
