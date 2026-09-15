@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, IBM_Plex_Mono, Work_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { LenisProvider } from "@/components/layout/lenis";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import { CustomCursor } from "@/components/motion/custom-cursor";
 import { Toaster } from "@/components/ui/sonner";
@@ -192,7 +193,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           enableSystem
           disableTransitionOnChange
         >
-          <MotionProvider>{children}</MotionProvider>
+          <MotionProvider>
+            <LenisProvider>{children}</LenisProvider>
+          </MotionProvider>
           <CustomCursor />
           <Toaster richColors position="bottom-right" />
         </ThemeProvider>
