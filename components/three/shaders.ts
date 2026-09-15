@@ -1,27 +1,24 @@
 /**
- * Hyperrealistic 4K 3D Combustion & Flame Shaders.
+ * Hyperrealistic Natural Wood Flame & Ember Shaders.
  *
  * Implements:
- * - Divergence-free 3D Curl Noise for realistic fluid flame licking & vortical eddies.
- * - Multi-octave 3D Simplex noise + 5-octave domain-warped fractal Brownian motion (fbm).
- * - 3D Voronoi / Worley cellular noise for sharp flame tendril pinching and charcoal crack textures.
- * - Physically-informed Planck Blackbody radiation temperature spectrum (1000K -> 3600K).
- * - Chemiluminescent oxygen-radical blue/violet combustion base.
- * - Volumetric optical depth & rim gas luminescence.
- * - Velocity-aligned elongated streak motion blur on ember sparks.
- * - Incandescent charcoal ember bed with pulsing glowing fissures.
+ * - 3D Divergence-free Curl Noise for natural fluid flame licking and convection.
+ * - Simplex 3D noise for organic laminar-to-turbulent flame transition.
+ * - Authentic Quebracho wood fire Blackbody palette: warm ivory core, honey amber body, fiery orange, deep ruby tips.
+ * - Perfectly feathered alpha envelope (zero clipping, zero square box artifacts).
+ * - Soft Gaussian ember sparks with radiative cooling.
  */
 
 /* =========================================================================
-   COMMON GLSL UTILITIES (Simplex Noise, 3D Curl Noise, Voronoi, Blackbody)
+   COMMON GLSL UTILITIES (Simplex Noise, 3D Curl Noise)
    ========================================================================= */
 
-const GLSL_COMMON_NOISE = /* glsl */ `
-  vec4 permute(vec4 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+const GLSL_COMMON = /* glsl */ `
+  vec4 permute(vec4 x) { return mod(((x * 34.0) + 1.0) * x, 289.0); }
   vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
 
   float snoise(vec3 v) {
-    const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+    const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
     const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
 
     vec3 i  = floor(v + dot(v, C.yyy));
@@ -50,46 +47,46 @@ const GLSL_COMMON_NOISE = /* glsl */ `
     vec4 x_ = floor(j * ns.z);
     vec4 y_ = floor(j - 7.0 * x_);
 
-    vec4 x = x_ *ns.x + ns.yyyy;
-    vec4 y = y_ *ns.x + ns.yyyy;
+    vec4 x = x_ * ns.x + ns.yyyy;
+    vec4 y = y_ * ns.x + ns.yyyy;
     vec4 h = 1.0 - abs(x) - abs(y);
 
     vec4 b0 = vec4(x.xy, y.xy);
     vec4 b1 = vec4(x.zw, y.zw);
 
-    vec4 s0 = floor(b0)*2.0 + 1.0;
-    vec4 s1 = floor(b1)*2.0 + 1.0;
+    vec4 s0 = floor(b0) * 2.0 + 1.0;
+    vec4 s1 = floor(b1) * 2.0 + 1.0;
     vec4 sh = -step(h, vec4(0.0));
 
-    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+    vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
+    vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
 
     vec3 p0 = vec3(a0.xy, h.x);
     vec3 p1 = vec3(a0.zw, h.y);
     vec3 p2 = vec3(a1.xy, h.z);
     vec3 p3 = vec3(a1.zw, h.w);
 
-    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+    vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
     p0 *= norm.x;
     p1 *= norm.y;
     p2 *= norm.z;
     p3 *= norm.w;
 
-    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+    vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
     m = m * m;
-    return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+    return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
   }
 
-  // 3D Divergence-free Curl Noise for fluid vorticity & swirling eddies
+  // 3D Divergence-free Curl Noise for organic fluid eddies
   vec3 curlNoise(vec3 p) {
-    const float e = 0.07;
+    const float e = 0.08;
     vec3 dx = vec3(e, 0.0, 0.0);
     vec3 dy = vec3(0.0, e, 0.0);
     vec3 dz = vec3(0.0, 0.0, e);
 
     vec3 p1 = p;
-    vec3 p2 = p + vec3(19.3, 41.6, 73.9);
-    vec3 p3 = p + vec3(87.7, 61.4, 29.1);
+    vec3 p2 = p + vec3(14.3, 31.6, 59.9);
+    vec3 p3 = p + vec3(73.7, 49.4, 18.1);
 
     float n1_y = (snoise(p1 + dy) - snoise(p1 - dy));
     float n1_z = (snoise(p1 + dz) - snoise(p1 - dz));
@@ -103,78 +100,33 @@ const GLSL_COMMON_NOISE = /* glsl */ `
     return vec3(n3_y - n2_z, n1_z - n3_x, n2_x - n1_y) / (2.0 * e);
   }
 
-  // 3D Voronoi / Worley Noise for organic cellular structures & crack veins
-  float voronoi3D(vec3 p) {
-    vec3 b = floor(p);
-    vec3 f = fract(p);
-    float res = 1.0;
-    for (int k = -1; k <= 1; k++) {
-      for (int j = -1; j <= 1; j++) {
-        for (int i = -1; i <= 1; i++) {
-          vec3 g = vec3(float(i), float(j), float(k));
-          vec3 hash = fract(sin(vec3(
-            dot(b + g, vec3(127.1, 311.7, 74.7)),
-            dot(b + g, vec3(269.5, 183.3, 246.1)),
-            dot(b + g, vec3(113.5, 271.9, 124.6))
-          )) * 43758.5453);
-          vec3 d = g + hash - f;
-          res = min(res, length(d));
-        }
-      }
-    }
-    return res;
-  }
-
-  // 5-octave Fractal Brownian Motion
-  float fbm5(vec3 p) {
+  // 4-octave smooth FBM
+  float fbm(vec3 p) {
     float v = 0.0;
     float a = 0.5;
-    vec3 shift = vec3(100.0);
-    for (int i = 0; i < 5; ++i) {
+    vec3 shift = vec3(50.0);
+    for (int i = 0; i < 4; ++i) {
       v += a * (0.5 + 0.5 * snoise(p));
-      p = p * 2.05 + shift;
-      a *= 0.49;
+      p = p * 2.04 + shift;
+      a *= 0.5;
     }
     return v;
   }
 
-  // Domain-warped fluid turbulence for 4K flame dynamics
-  float fluidTurbulence(vec3 p, float t) {
-    vec3 drift = vec3(0.0, -t, 0.0);
-    vec3 c = curlNoise((p + drift) * 1.15);
-    vec3 q = p + drift + c * 0.38;
-    float f1 = fbm5(q);
-    float f2 = fbm5(q * 2.3 + vec3(1.7, t * 0.4, 4.3));
-    return mix(f1, f2, 0.35);
-  }
+  // Authentic Natural Wood-Fire Color Palette
+  vec3 getNaturalFlameColor(float t) {
+    // Natural wood flame spectrum:
+    vec3 cEmberAsh   = vec3(0.35, 0.06, 0.02);  // Deep ruby ember base/edges
+    vec3 cRubyRed    = vec3(0.78, 0.14, 0.03);  // Rich red
+    vec3 cFieryOrange= vec3(0.96, 0.38, 0.06);  // Saturated warm orange
+    vec3 cGoldenAmber= vec3(1.00, 0.68, 0.16);  // Luminous honey amber
+    vec3 cWarmIvory  = vec3(1.00, 0.94, 0.76);  // Soft incandescent core
 
-  // Physically-based Planck Blackbody Radiation color curve
-  vec3 blackbodyPalette(float t, float blueBase) {
-    // T in [0.0, 1.0]
-    vec3 cDeepAsh     = vec3(0.16, 0.015, 0.005);
-    vec3 cDarkRuby    = vec3(0.55, 0.05, 0.012);
-    vec3 cFieryRed    = vec3(0.92, 0.16, 0.02);
-    vec3 cRichOrange  = vec3(1.00, 0.45, 0.04);
-    vec3 cVividAmber  = vec3(1.00, 0.74, 0.14);
-    vec3 cBrightGold  = vec3(1.00, 0.92, 0.45);
-    vec3 cWhiteHot    = vec3(1.00, 0.99, 0.94);
-
-    // Chemiluminescent blue/violet combustion radicals at the base
-    vec3 cCyanBlue    = vec3(0.08, 0.52, 1.00);
-    vec3 cUltraviolet = vec3(0.42, 0.10, 0.96);
-
-    vec3 col = cDeepAsh;
-    col = mix(col, cDarkRuby,   smoothstep(0.03, 0.18, t));
-    col = mix(col, cFieryRed,   smoothstep(0.18, 0.36, t));
-    col = mix(col, cRichOrange, smoothstep(0.36, 0.55, t));
-    col = mix(col, cVividAmber, smoothstep(0.55, 0.72, t));
-    col = mix(col, cBrightGold, smoothstep(0.72, 0.86, t));
-    col = mix(col, cWhiteHot,   smoothstep(0.86, 1.00, t));
-
-    if (blueBase > 0.001) {
-      vec3 blueRadical = mix(cUltraviolet, cCyanBlue, smoothstep(0.0, 0.6, blueBase));
-      col = mix(col, blueRadical, clamp(blueBase * 0.92, 0.0, 1.0));
-    }
+    vec3 col = cEmberAsh;
+    col = mix(col, cRubyRed,     smoothstep(0.05, 0.28, t));
+    col = mix(col, cFieryOrange, smoothstep(0.28, 0.55, t));
+    col = mix(col, cGoldenAmber, smoothstep(0.55, 0.82, t));
+    col = mix(col, cWarmIvory,   smoothstep(0.82, 1.00, t));
     return col;
   }
 `;
@@ -196,64 +148,58 @@ export const FLAME_VERTEX = /* glsl */ `
   varying vec3 vViewDir;
   varying vec3 vNormalVec;
   varying float vNoise;
-  varying float vRadial;
   varying float vFacing;
 
-  ${GLSL_COMMON_NOISE}
+  ${GLSL_COMMON}
 
   void main() {
     float v = clamp((position.y - uBaseY) / uHeight, 0.0, 1.0);
 
-    // Buoyant convective flow speed scales with heat
-    float flowSpeed = 1.35 + uHeat * 1.65;
-    float time = uTime * flowSpeed + uSeed * 3.7;
+    // Natural buoyant flow speed
+    float flowSpeed = 0.95 + uHeat * 0.75;
+    float t = uTime * flowSpeed + uSeed * 2.3;
 
-    // Convective buoyant height flicker and expansion
-    float heightFlicker = 1.0 + (snoise(vec3(uSeed * 2.1, time * 0.8, v * 2.0)) * 0.18) * (0.8 + 0.5 * uHeat);
-    float flameH = uHeight * (1.0 + uHeat * 0.28) * heightFlicker;
+    // Gentle height pulsation (breathing fire)
+    float heightPulse = 1.0 + sin(t * 1.6 + v * 3.0) * (0.04 + 0.06 * uHeat);
+    float flameH = uHeight * (1.0 + uHeat * 0.14) * heightPulse;
     float y = uBaseY + v * flameH;
 
-    // Cross-section & center line from isotype silhouette
+    // Cross section & center line
     float cOff = (texture2D(uCenter, vec2(v, 0.5)).r - 0.5) * 2.0;
     vec2 h = position.xz;
     float r = length(h);
     vec2 dir = r > 0.0001 ? h / r : vec2(1.0, 0.0);
 
-    // Dynamic 3D fluid curl noise field
-    vec3 curlSample = vec3(position.x * 1.4 + cOff, (y - uBaseY) * 1.6 - time * 1.2, position.z * 1.4);
-    vec3 curl = curlNoise(curlSample);
+    // Smooth fluid curl displacement
+    vec3 curlCoord = vec3(position.x * 1.2 + cOff, (y - uBaseY) * 1.4 - t * 1.1, position.z * 1.2);
+    vec3 curl = curlNoise(curlCoord);
 
-    // Multi-scale fluid noise displacement
-    float n1 = fluidTurbulence(vec3(position.x * 1.8, y * 1.5, position.z * 1.8), time);
-    float n2 = snoise(vec3(position.x * 3.5, y * 3.2 - time * 2.0, position.z * 3.5));
+    // Amplitude: rooted at base (v=0), swaying gracefully up to the tip
+    float amp = smoothstep(0.05, 0.95, v) * (0.06 + 0.10 * uHeat);
+    float tipAmp = smoothstep(0.55, 1.0, v) * (0.12 + 0.18 * uHeat);
 
-    // Amplitude grows with height: base is rooted on coals, tip whips with turbulence
-    float amp = smoothstep(0.04, 0.95, v) * (0.09 + 0.16 * uHeat);
-    float tipAmp = smoothstep(0.62, 1.0, v) * (0.24 + 0.35 * uHeat);
-
-    // Fluid width pulsation (flame licks & bulges)
-    float wScale = 1.0 + (n1 - 0.5) * (0.65 + 0.85 * uHeat) * smoothstep(0.1, 0.92, v);
+    // Natural width expansion & lick variation
+    float n = fbm(vec3(position.x * 2.0, y * 1.8 - t * 1.3, position.z * 2.0));
+    float wScale = 1.0 + (n - 0.5) * (0.45 + 0.55 * uHeat) * smoothstep(0.1, 0.9, v);
     vec2 ring = dir * r * wScale;
-    ring.y *= 0.68; // Slightly oval depth for volumetric body
+    ring.y *= 0.72; // Subtle depth oval
 
-    // Calculate final displaced 3D position
+    // Displaced position
     vec3 pos = vec3(ring.x + cOff, y, ring.y);
     pos += curl * amp;
-    pos.x += (curl.x * 1.4 + (n2 - 0.5) * 0.8) * tipAmp;
-    pos.z += (curl.z * 1.2) * tipAmp * 0.7;
+    pos.x += curl.x * tipAmp;
+    pos.z += curl.z * tipAmp * 0.7;
 
-    // Organic tip dance (sinuous natural licking flame motion)
-    float tipSway = sin(time * 2.2 + v * 5.0) * (0.07 + 0.12 * uHeat) * smoothstep(0.7, 1.0, v);
-    pos.x += tipSway;
+    // Gentle natural flame lick sway
+    pos.x += sin(t * 1.8 + v * 4.0) * (0.03 + 0.05 * uHeat) * smoothstep(0.6, 1.0, v);
 
     vec4 world = modelMatrix * vec4(pos, 1.0);
     vWorldPos = world.xyz;
     vViewDir = normalize(cameraPosition - world.xyz);
     vNormalVec = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
     vV = v;
-    vRadial = r;
-    vNoise = n1;
-    vFacing = pow(max(dot(vNormalVec, vViewDir), 0.0), 0.6);
+    vNoise = n;
+    vFacing = pow(max(dot(vNormalVec, vViewDir), 0.0), 0.5);
 
     gl_Position = projectionMatrix * viewMatrix * world;
   }
@@ -270,66 +216,53 @@ export const FLAME_FRAGMENT = /* glsl */ `
   varying vec3 vViewDir;
   varying vec3 vNormalVec;
   varying float vNoise;
-  varying float vRadial;
   varying float vFacing;
 
-  ${GLSL_COMMON_NOISE}
+  ${GLSL_COMMON}
 
   void main() {
     float v = vV;
+    float flowSpeed = 0.95 + uHeat * 0.75;
+    float t = uTime * flowSpeed + uSeed * 2.3;
 
-    // Multi-frequency 4K procedural flame turbulence
-    float flowTime = uTime * (1.35 + uHeat * 1.65) + uSeed * 3.7;
-    vec3 microCoord = vec3(vWorldPos.x * 5.2, vWorldPos.y * 4.6 - flowTime * 1.6, vWorldPos.z * 5.2);
-    float microNoise = fbm5(microCoord);
+    // 3D procedural internal flame turbulence
+    vec3 microCoord = vec3(vWorldPos.x * 3.6, vWorldPos.y * 3.2 - t * 1.4, vWorldPos.z * 3.6);
+    float microNoise = fbm(microCoord);
 
-    // Worley cellular noise for sharp fire tendril pinching and lick separation
-    vec3 voroCoord = vec3(vWorldPos.x * 4.0, vWorldPos.y * 3.5 - flowTime * 2.2, vWorldPos.z * 4.0);
-    float voro = voronoi3D(voroCoord);
-
-    // Temperature distribution:
-    // Hottest at center-base (white-hot plasma core), cooling towards upper tips and outer boundaries
-    float centerProximity = 1.0 - clamp(abs(vWorldPos.x) * 1.2, 0.0, 1.0);
-    float baseHeat = smoothstep(0.0, 0.35, v) * (1.0 - smoothstep(0.35, 1.0, v) * 0.85);
-
-    float temp = (1.0 - v * 0.82) * 0.65
-               + (centerProximity * 0.35)
-               + (baseHeat * 0.25)
-               + (vNoise - 0.5) * 0.45
-               + (microNoise - 0.5) * 0.28
-               + (uHeat * 0.28);
+    // Temperature field (1.0 = warm ivory core, 0.0 = deep ruby ember edge)
+    float centerDist = clamp(length(vWorldPos.xz) * 1.3, 0.0, 1.0);
+    float temp = (1.0 - v * 0.72) * 0.65
+               + (1.0 - centerDist) * 0.45
+               + (microNoise - 0.5) * 0.35
+               + (uHeat * 0.22);
     temp = clamp(temp, 0.0, 1.0);
 
-    // Chemiluminescent blue foot at the very base (oxygen-rich combustion zone)
-    float blueBase = smoothstep(0.20, 0.01, v) * (1.0 - smoothstep(0.0, 0.12, abs(vWorldPos.x))) * 0.95;
+    // Natural wood fire color
+    vec3 col = getNaturalFlameColor(temp);
 
-    // Calculate Planck blackbody radiant color
-    vec3 col = blackbodyPalette(temp, blueBase);
+    // Volumetric translucency & gentle glow
+    float gasDepth = 0.75 + 0.35 * vFacing;
+    col *= gasDepth * (1.0 + uHeat * 0.35);
 
-    // Volumetric optical gas depth & rim glow:
-    // Translucent gas is brighter where view passes through more volume
-    float gasDepth = 0.55 + 0.65 * vFacing + (1.0 - vFacing) * 0.45 * smoothstep(0.1, 0.6, v);
-    col *= gasDepth;
+    // Soft, perfectly feathered envelope (GUARANTEES zero square/hard edge clipping)
+    // 1. Bottom feathering (smoothly emerges from darkness)
+    float baseFade = smoothstep(0.0, 0.12, v);
+    // 2. Top feathering (smoothly dissolves into air)
+    float topFade = 1.0 - smoothstep(0.78, 0.98, v);
+    // 3. Flame lick tongue erosion at the tip
+    float tongueErosion = smoothstep(0.2, 0.8, microNoise + (1.0 - v) * 0.4);
 
-    // Dynamic emission boost when heated / clicked
-    col *= (1.05 + uHeat * 0.55);
+    float alpha = baseFade * topFade * tongueErosion * (0.85 + 0.15 * vFacing) * uReveal;
 
-    // 4K razor-sharp flame tip tendril erosion (Worley noise breaks flame into sharp licks)
-    float tipErosion = smoothstep(0.65, 0.98, v);
-    float alphaErosion = smoothstep(0.18 + tipErosion * 0.52, 0.75, voro + microNoise * 0.4);
+    // Discard only below a negligible threshold with smooth blend
+    if (alpha < 0.003) discard;
 
-    // Soft alpha envelope with organic edge falloff
-    float alpha = (1.0 - smoothstep(0.85, 1.0, v) * 0.7) * alphaErosion;
-    alpha = clamp(alpha * (0.85 + vFacing * 0.25), 0.0, 1.0);
-
-    if (alpha * uReveal < 0.008) discard;
-
-    gl_FragColor = vec4(col, alpha * uReveal);
+    gl_FragColor = vec4(col, alpha);
   }
 `;
 
 /* =========================================================================
-   2. INNER WHITE-HOT PLASMA CORE SHADER
+   2. SOFT INNER INCANDESCENT CORE SHADER
    ========================================================================= */
 
 export const FLAME_CORE_VERTEX = /* glsl */ `
@@ -342,192 +275,28 @@ export const FLAME_CORE_VERTEX = /* glsl */ `
 
   varying float vV;
   varying vec3 vWorldPos;
-  varying vec3 vViewDir;
   varying float vFacing;
 
-  ${GLSL_COMMON_NOISE}
+  ${GLSL_COMMON}
 
   void main() {
     float v = clamp((position.y - uBaseY) / uHeight, 0.0, 1.0);
-    float flowSpeed = 1.6 + uHeat * 2.0;
-    float time = uTime * flowSpeed + uSeed;
+    float flowSpeed = 1.1 + uHeat * 0.8;
+    float t = uTime * flowSpeed + uSeed;
 
-    float flameH = uHeight * 0.88 * (1.0 + uHeat * 0.2);
+    float flameH = uHeight * 0.82 * (1.0 + uHeat * 0.12);
     float y = uBaseY + v * flameH;
 
-    float cOff = (texture2D(uCenter, vec2(v, 0.5)).r - 0.5) * 1.6;
+    float cOff = (texture2D(uCenter, vec2(v, 0.5)).r - 0.5) * 1.8;
     vec2 h = position.xz;
-    float r = length(h) * 0.65; // Concentrated inner core
+    float r = length(h) * 0.55; // Concentrated soft core
     vec2 dir = r > 0.0001 ? h / r : vec2(1.0, 0.0);
 
-    vec3 curl = curlNoise(vec3(position.x * 1.8, y * 2.0 - time * 1.5, position.z * 1.8));
-    float amp = smoothstep(0.08, 0.95, v) * (0.05 + 0.09 * uHeat);
-
-    vec3 pos = vec3(dir.x * r + cOff, y, dir.y * r * 0.65);
-    pos += curl * amp;
-
-    vec4 world = modelMatrix * vec4(pos, 1.0);
-    vWorldPos = world.xyz;
-    vViewDir = normalize(cameraPosition - world.xyz);
-    vFacing = pow(max(dot(normalize((modelMatrix * vec4(normal, 0.0)).xyz), vViewDir), 0.0), 0.8);
-    vV = v;
-
-    gl_Position = projectionMatrix * viewMatrix * world;
-  }
-`;
-
-export const FLAME_CORE_FRAGMENT = /* glsl */ `
-  uniform float uReveal;
-  uniform float uHeat;
-  uniform float uTime;
-
-  varying float vV;
-  varying vec3 vWorldPos;
-  varying vec3 vViewDir;
-  varying float vFacing;
-
-  ${GLSL_COMMON_NOISE}
-
-  void main() {
-    float v = vV;
-
-    // Core is intensely hot plasma (2800K - 3600K)
-    float plasma = smoothstep(0.9, 0.05, v) * (0.7 + 0.3 * vFacing);
-    vec3 cWhite = vec3(1.00, 0.99, 0.95);
-    vec3 cGold  = vec3(1.00, 0.90, 0.45);
-    vec3 cAmber = vec3(1.00, 0.68, 0.12);
-
-    vec3 col = mix(cAmber, cGold, smoothstep(0.15, 0.65, plasma));
-    col = mix(col, cWhite, smoothstep(0.65, 0.98, plasma));
-
-    // High emission intensity
-    col *= (1.4 + uHeat * 0.8);
-
-    float alpha = smoothstep(0.92, 0.1, v) * (0.75 + 0.25 * vFacing) * uReveal;
-    if (alpha < 0.005) discard;
-
-    gl_FragColor = vec4(col, alpha);
-  }
-`;
-
-/* =========================================================================
-   3. OUTER WHISPS & LICKING TENDRILS SHADER
-   ========================================================================= */
-
-export const FLAME_OUTER_VERTEX = /* glsl */ `
-  uniform float uTime;
-  uniform float uHeat;
-  uniform float uSeed;
-  uniform float uBaseY;
-  uniform float uHeight;
-  uniform sampler2D uCenter;
-
-  varying float vV;
-  varying vec3 vWorldPos;
-  varying vec3 vViewDir;
-  varying float vFacing;
-
-  ${GLSL_COMMON_NOISE}
-
-  void main() {
-    float v = clamp((position.y - uBaseY) / uHeight, 0.0, 1.0);
-    float flowSpeed = 1.5 + uHeat * 1.8;
-    float time = uTime * flowSpeed + uSeed * 7.1;
-
-    float flameH = uHeight * 1.14 * (1.0 + uHeat * 0.32);
-    float y = uBaseY + v * flameH;
-
-    float cOff = (texture2D(uCenter, vec2(v, 0.5)).r - 0.5) * 2.2;
-    vec2 h = position.xz;
-    float r = length(h) * 1.15; // Outer envelope
-    vec2 dir = r > 0.0001 ? h / r : vec2(1.0, 0.0);
-
-    vec3 curl = curlNoise(vec3(position.x * 1.2, y * 1.4 - time * 1.3, position.z * 1.2));
-    float amp = smoothstep(0.12, 0.98, v) * (0.16 + 0.26 * uHeat);
-
-    vec3 pos = vec3(dir.x * r + cOff, y, dir.y * r * 0.72);
-    pos += curl * amp;
-
-    vec4 world = modelMatrix * vec4(pos, 1.0);
-    vWorldPos = world.xyz;
-    vViewDir = normalize(cameraPosition - world.xyz);
-    vFacing = pow(max(dot(normalize((modelMatrix * vec4(normal, 0.0)).xyz), vViewDir), 0.0), 0.5);
-    vV = v;
-
-    gl_Position = projectionMatrix * viewMatrix * world;
-  }
-`;
-
-export const FLAME_OUTER_FRAGMENT = /* glsl */ `
-  uniform float uReveal;
-  uniform float uHeat;
-  uniform float uTime;
-  uniform float uSeed;
-
-  varying float vV;
-  varying vec3 vWorldPos;
-  varying vec3 vViewDir;
-  varying float vFacing;
-
-  ${GLSL_COMMON_NOISE}
-
-  void main() {
-    float v = vV;
-    float flowTime = uTime * (1.5 + uHeat * 1.8) + uSeed * 7.1;
-
-    vec3 voroCoord = vec3(vWorldPos.x * 3.8, vWorldPos.y * 3.2 - flowTime * 2.4, vWorldPos.z * 3.8);
-    float voro = voronoi3D(voroCoord);
-
-    vec3 microCoord = vec3(vWorldPos.x * 6.0, vWorldPos.y * 5.0 - flowTime * 1.8, vWorldPos.z * 6.0);
-    float micro = fbm5(microCoord);
-
-    // Deep glowing ruby red and fiery orange tendrils
-    vec3 cEmber  = vec3(0.58, 0.06, 0.015);
-    vec3 cOrange = vec3(0.98, 0.38, 0.04);
-    vec3 cGold   = vec3(1.00, 0.72, 0.15);
-
-    float t = (1.0 - v * 0.75) * 0.6 + (micro - 0.5) * 0.4 + uHeat * 0.25;
-    vec3 col = mix(cEmber, cOrange, smoothstep(0.2, 0.55, t));
-    col = mix(col, cGold, smoothstep(0.55, 0.9, t));
-
-    // Outer tendrils are highly translucent and eroded into wisps
-    float alpha = smoothstep(0.42, 0.85, voro + micro * 0.35) * (1.0 - smoothstep(0.8, 1.0, v)) * 0.65;
-    alpha *= (0.6 + 0.4 * (1.0 - vFacing)); // Rim emphasis
-
-    if (alpha * uReveal < 0.005) discard;
-
-    gl_FragColor = vec4(col * (1.0 + uHeat * 0.4), alpha * uReveal);
-  }
-`;
-
-/* =========================================================================
-   4. CHEMILUMINESCENT BLUE ROOT / BASE SHADER
-   ========================================================================= */
-
-export const FLAME_BLUE_BASE_VERTEX = /* glsl */ `
-  uniform float uTime;
-  uniform float uHeat;
-  uniform float uSeed;
-  uniform float uBaseY;
-  uniform float uHeight;
-  uniform sampler2D uCenter;
-
-  varying float vV;
-  varying vec3 vWorldPos;
-  varying float vFacing;
-
-  ${GLSL_COMMON_NOISE}
-
-  void main() {
-    float v = clamp((position.y - uBaseY) / (uHeight * 0.32), 0.0, 1.0);
-    float y = uBaseY + v * (uHeight * 0.32);
-
-    float cOff = (texture2D(uCenter, vec2(v * 0.32, 0.5)).r - 0.5) * 2.0;
-    vec2 h = position.xz;
-    float r = length(h) * 1.08;
-    vec2 dir = r > 0.0001 ? h / r : vec2(1.0, 0.0);
+    vec3 curl = curlNoise(vec3(position.x * 1.4, y * 1.6 - t * 1.2, position.z * 1.4));
+    float amp = smoothstep(0.08, 0.92, v) * (0.04 + 0.06 * uHeat);
 
     vec3 pos = vec3(dir.x * r + cOff, y, dir.y * r * 0.7);
+    pos += curl * amp;
 
     vec4 world = modelMatrix * vec4(pos, 1.0);
     vWorldPos = world.xyz;
@@ -539,135 +308,55 @@ export const FLAME_BLUE_BASE_VERTEX = /* glsl */ `
   }
 `;
 
-export const FLAME_BLUE_BASE_FRAGMENT = /* glsl */ `
+export const FLAME_CORE_FRAGMENT = /* glsl */ `
   uniform float uReveal;
   uniform float uHeat;
-  uniform float uTime;
 
   varying float vV;
-  varying vec3 vWorldPos;
   varying float vFacing;
 
   void main() {
     float v = vV;
 
-    // Vivid cyan and ultraviolet combustion radicals
-    vec3 cBlue = vec3(0.06, 0.55, 1.00);
-    vec3 cViolet = vec3(0.48, 0.12, 0.98);
+    // Warm luminous honey-gold core
+    vec3 cWarmCore = vec3(1.00, 0.88, 0.48);
+    vec3 cIvory    = vec3(1.00, 0.96, 0.82);
 
-    vec3 col = mix(cBlue, cViolet, smoothstep(0.0, 0.8, v));
-    col *= (1.2 + uHeat * 0.6);
+    float coreTemp = (1.0 - v * 0.85) * (0.6 + 0.4 * vFacing);
+    vec3 col = mix(cWarmCore, cIvory, smoothstep(0.4, 0.95, coreTemp));
+    col *= (1.1 + uHeat * 0.35);
 
-    float alpha = (1.0 - smoothstep(0.1, 0.95, v)) * (0.65 + 0.35 * (1.0 - vFacing)) * uReveal;
-    if (alpha < 0.005) discard;
+    // Soft feathered fade
+    float alpha = smoothstep(0.0, 0.15, v) * (1.0 - smoothstep(0.65, 0.95, v)) * 0.55 * uReveal;
+    if (alpha < 0.003) discard;
 
     gl_FragColor = vec4(col, alpha);
   }
 `;
 
 /* =========================================================================
-   5. 3D INCANDESCENT CHARCOAL EMBER BED (BRASAS) SHADER
-   ========================================================================= */
-
-export const CHARCOAL_BED_VERTEX = /* glsl */ `
-  uniform float uTime;
-  uniform float uHeat;
-
-  varying vec3 vWorldPos;
-  varying vec3 vNormalVec;
-  varying vec3 vViewDir;
-
-  ${GLSL_COMMON_NOISE}
-
-  void main() {
-    vec3 pos = position;
-
-    // Organic rough charcoal stone deformation
-    float rough = snoise(pos * 4.2) * 0.045 + snoise(pos * 9.5) * 0.018;
-    pos += normal * rough;
-
-    vec4 world = modelMatrix * vec4(pos, 1.0);
-    vWorldPos = world.xyz;
-    vNormalVec = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
-    vViewDir = normalize(cameraPosition - world.xyz);
-
-    gl_Position = projectionMatrix * viewMatrix * world;
-  }
-`;
-
-export const CHARCOAL_BED_FRAGMENT = /* glsl */ `
-  uniform float uHeat;
-  uniform float uTime;
-  uniform float uReveal;
-
-  varying vec3 vWorldPos;
-  varying vec3 vNormalVec;
-  varying vec3 vViewDir;
-
-  ${GLSL_COMMON_NOISE}
-
-  void main() {
-    // 3D Voronoi cracks in the charcoal coals
-    vec3 crackCoord = vWorldPos * 6.5;
-    float voro = voronoi3D(crackCoord);
-
-    // Deep fissures glow incandescently
-    float crack = 1.0 - smoothstep(0.02, 0.28, voro);
-    crack = pow(crack, 2.2);
-
-    // Gentle embers breathing
-    float breathe = 0.5 + 0.5 * sin(uTime * 1.8 + vWorldPos.x * 4.0);
-    float glowTemp = crack * (0.65 + 0.35 * breathe) + uHeat * 0.45;
-
-    // Incandescent color palette for glowing fissures
-    vec3 cCharcoalDark = vec3(0.09, 0.07, 0.06);
-    vec3 cEmberRed      = vec3(0.85, 0.14, 0.02);
-    vec3 cAmberGold     = vec3(1.00, 0.65, 0.12);
-    vec3 cWhiteHot      = vec3(1.00, 0.98, 0.88);
-
-    vec3 glowCol = mix(cEmberRed, cAmberGold, smoothstep(0.3, 0.75, glowTemp));
-    glowCol = mix(glowCol, cWhiteHot, smoothstep(0.75, 1.1, glowTemp));
-    glowCol *= (1.2 + uHeat * 0.8);
-
-    // Carbon crust shading
-    float diff = max(dot(vNormalVec, vec3(0.0, 1.0, 0.3)), 0.0);
-    vec3 crustCol = cCharcoalDark * (0.8 + 0.4 * diff);
-
-    vec3 finalCol = mix(crustCol, glowCol, clamp(crack * 1.4, 0.0, 1.0));
-
-    gl_FragColor = vec4(finalCol, uReveal);
-  }
-`;
-
-/* =========================================================================
-   6. HYPERREALISTIC EMBER SPARKS WITH VELOCITY-STRETCH & BLACKBODY COOLING
+   3. ELEGANT EMBER SPARKS WITH GAUSSIAN CIRCULAR FALLOFF
    ========================================================================= */
 
 export const SPARK_VERTEX = /* glsl */ `
   attribute float aLife;
   attribute float aSize;
   attribute float aTint;
-  attribute vec3 aVelocity;
 
   uniform float uPointScale;
 
   varying float vLife;
   varying float vTint;
-  varying float vSpeed;
 
   void main() {
     vLife = aLife;
     vTint = aTint;
 
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    float speed = length(aVelocity);
-    vSpeed = speed;
-
-    // Point size scales realistically with distance and life
     float baseSize = aSize * uPointScale / max(0.1, -mv.z);
-    float size = aLife > 0.0 ? baseSize * (0.65 + 0.45 * smoothstep(0.0, 0.4, aLife)) : 0.0;
+    float size = aLife > 0.0 ? baseSize * (0.65 + 0.35 * smoothstep(0.0, 0.3, aLife)) : 0.0;
 
-    gl_PointSize = clamp(size, 1.0, 64.0);
+    gl_PointSize = clamp(size, 1.0, 32.0);
     gl_Position = projectionMatrix * mv;
   }
 `;
@@ -675,43 +364,34 @@ export const SPARK_VERTEX = /* glsl */ `
 export const SPARK_FRAGMENT = /* glsl */ `
   varying float vLife;
   varying float vTint;
-  varying float vSpeed;
 
   void main() {
     if (vLife <= 0.0) discard;
 
     vec2 c = gl_PointCoord - 0.5;
     float d = length(c);
+    // Smooth Gaussian circular falloff (ensures zero square artifacts)
     if (d > 0.5) discard;
+    float circle = smoothstep(0.5, 0.0, d);
+    circle = circle * circle;
+    float core = smoothstep(0.15, 0.0, d);
 
-    // Glowing core and soft halo
-    float glow = smoothstep(0.5, 0.0, d);
-    glow = pow(glow, 1.8);
-    float core = smoothstep(0.18, 0.0, d);
+    // Warm embers cooling: honey gold -> warm orange -> ruby cinder
+    vec3 cGold   = vec3(1.00, 0.84, 0.38);
+    vec3 cOrange = vec3(0.96, 0.48, 0.10);
+    vec3 cRuby   = vec3(0.68, 0.12, 0.03);
 
-    // Blackbody temperature cools down over lifetime (1.0 -> 0.0)
-    vec3 cWhiteHot = vec3(1.00, 0.99, 0.92);
-    vec3 cGold     = vec3(1.00, 0.82, 0.28);
-    vec3 cOrange   = vec3(1.00, 0.45, 0.06);
-    vec3 cCrimson  = vec3(0.68, 0.08, 0.02);
-    vec3 cAsh      = vec3(0.22, 0.04, 0.01);
+    vec3 col = mix(cRuby, cOrange, smoothstep(0.0, 0.45, vLife));
+    col = mix(col, cGold, smoothstep(0.45, 0.90, vLife));
+    col = mix(col, vec3(1.0, 0.98, 0.90), core * 0.6);
 
-    vec3 col = cAsh;
-    col = mix(col, cCrimson,  smoothstep(0.0, 0.25, vLife));
-    col = mix(col, cOrange,   smoothstep(0.25, 0.55, vLife));
-    col = mix(col, cGold,     smoothstep(0.55, 0.82, vLife));
-    col = mix(col, cWhiteHot, smoothstep(0.82, 1.00, vLife));
-
-    // High speed / hot sparks have blinding white core
-    col = mix(col, cWhiteHot, core * smoothstep(0.4, 1.0, vLife));
-
-    float alpha = glow * pow(vLife, 0.7);
-    gl_FragColor = vec4(col * (1.1 + core * 0.9), alpha);
+    float alpha = circle * pow(vLife, 0.7);
+    gl_FragColor = vec4(col * (1.0 + core * 0.5), alpha);
   }
 `;
 
 /* =========================================================================
-   7. LOADER SCENE EMBER PARTICLES (Cinematic Ignition)
+   4. LOADER SCENE EMBER PARTICLES (Smooth & Fast)
    ========================================================================= */
 
 export const LOADER_VERTEX = /* glsl */ `
@@ -728,33 +408,24 @@ export const LOADER_VERTEX = /* glsl */ `
   uniform float uPointScale;
 
   varying float vAlpha;
-  varying float vTint;
   varying float vProgress;
 
-  ${GLSL_COMMON_NOISE}
-
   void main() {
-    // Non-linear ease-in-out per-particle stagger
-    float p = clamp((uAssemble - aDelay * 0.45) / 0.55, 0.0, 1.0);
-    p = smoothstep(0.0, 1.0, p);
-    p = smoothstep(0.0, 1.0, p); // Double smooth for organic flocking
+    float p = clamp((uAssemble - aDelay * 0.35) / 0.65, 0.0, 1.0);
+    p = p * p * (3.0 - 2.0 * p);
     vProgress = p;
 
-    // Curl noise vortex while flying towards target
-    vec3 drift = curlNoise(mix(aStart, aTarget, p) * 1.5 + vec3(0.0, uTime * 0.5, 0.0)) * (1.0 - p) * 0.35;
-    vec3 pos = mix(aStart, aTarget, p) + drift;
-    pos += aScatter * (uDisperse * uDisperse * 1.4);
+    vec3 pos = mix(aStart, aTarget, p);
+    pos += aScatter * (uDisperse * uDisperse * 1.2);
 
-    // Subtle breathing drift
-    float floatAmt = (1.0 - p * 0.7) * (1.0 - uDisperse);
-    pos.x += sin(uTime * 1.2 + aDelay * 28.0) * 0.025 * floatAmt;
-    pos.y += cos(uTime * 1.5 + aDelay * 19.0) * 0.03 * floatAmt;
+    float floatAmt = (1.0 - p * 0.6) * (1.0 - uDisperse);
+    pos.x += sin(uTime * 1.2 + aDelay * 20.0) * 0.02 * floatAmt;
+    pos.y += cos(uTime * 1.4 + aDelay * 15.0) * 0.025 * floatAmt;
 
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
     vAlpha = (0.75 + 0.25 * p) * (1.0 - uDisperse * uDisperse * 0.95);
-    vTint = aTint;
 
-    gl_PointSize = min(aSize * uPointScale / max(0.1, -mv.z) * (0.85 + 0.65 * p), 38.0);
+    gl_PointSize = clamp(aSize * uPointScale / max(0.1, -mv.z) * (0.8 + 0.5 * p), 1.0, 24.0);
     gl_Position = projectionMatrix * mv;
   }
 `;
@@ -763,7 +434,6 @@ export const LOADER_FRAGMENT = /* glsl */ `
   uniform float uFade;
 
   varying float vAlpha;
-  varying float vTint;
   varying float vProgress;
 
   void main() {
@@ -772,19 +442,16 @@ export const LOADER_FRAGMENT = /* glsl */ `
     if (d > 0.5) discard;
 
     float glow = smoothstep(0.5, 0.0, d);
-    glow = pow(glow, 1.6);
-    float core = smoothstep(0.16, 0.0, d);
+    glow *= glow;
+    float core = smoothstep(0.15, 0.0, d);
 
-    vec3 cWhite = vec3(1.00, 0.99, 0.92);
-    vec3 cGold  = vec3(1.00, 0.85, 0.35);
-    vec3 cEmber = vec3(0.95, 0.40, 0.08);
+    vec3 cGold  = vec3(1.00, 0.78, 0.28);
+    vec3 cEmber = vec3(0.92, 0.38, 0.08);
 
-    vec3 col = mix(cEmber, cGold, vProgress * 0.75 + vTint * 0.25);
-    col = mix(col, cWhite, core * vProgress);
-
+    vec3 col = mix(cEmber, cGold, vProgress * 0.7 + core * 0.3);
     float alpha = glow * vAlpha * uFade;
     if (alpha < 0.005) discard;
 
-    gl_FragColor = vec4(col * (1.0 + core * 0.8), alpha);
+    gl_FragColor = vec4(col * (1.0 + core * 0.4), alpha);
   }
 `;

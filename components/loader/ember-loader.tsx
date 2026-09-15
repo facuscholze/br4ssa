@@ -13,12 +13,9 @@ const LoaderScene = dynamic(
   { ssr: false }
 );
 
-/** Hard cap: even if the 3D chunk or the timeline misbehave, the loader
- *  never holds the page hostage. */
-const HARD_TIMEOUT = 3800;
+/** Hard timeout cap so loader never blocks the page */
+const HARD_TIMEOUT = 1800;
 
-/** Static opening frame (also the chunk-loading placeholder and the
- *  no-WebGL fallback): the flame isotype + wordmark on #14100d. */
 function FlameMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 512 512" className={className} aria-hidden="true">
@@ -32,12 +29,9 @@ function FlameMark({ className }: { className?: string }) {
 }
 
 /**
- * Initial loader: ember particles scattered in black converge into the Brasa
- * flame isotype, the mark dissolves into the slowly rotating incandescent
- * coal, then the whole overlay fades into the hero (~2.3s).
+ * Snappy & Smooth Initial Loader.
  *
- * Skipped entirely under prefers-reduced-motion; falls back to the static
- * mark when WebGL is unavailable or the 3D chunk never arrives.
+ * Fast 0.9s sequence: particles converge -> flame ignites -> smooth fade to hero.
  */
 export function EmberLoader() {
   const reducedMotion = useReducedMotion();
@@ -61,13 +55,10 @@ export function EmberLoader() {
     notifyBrasaReady();
   }, []);
 
-  // Reduced motion: skip the loader entirely (signal before paint, no
-  // state, no flash of the mark).
   useLayoutEffect(() => {
     if (reducedMotion) notifyBrasaReady();
   }, [reducedMotion]);
 
-  // Lock scrolling + hard timeout while the loader is live.
   useEffect(() => {
     if (reducedMotion || done) return;
     stopLenis();
@@ -81,22 +72,17 @@ export function EmberLoader() {
     };
   }, [reducedMotion, done, complete]);
 
-  // Timeline: waits for the 3D layer, then drives the phases.
+  // Fast & smooth timeline
   useEffect(() => {
     if (reducedMotion || done || finishedRef.current) return;
 
     if (!webgl) {
-      // Still detecting or no WebGL: hold the static mark, then fade it.
-      let fadeTimer: number | undefined;
       const timer = window.setTimeout(() => {
         if (finishedRef.current) return;
         overlayRef.current?.classList.add("is-done");
-        fadeTimer = window.setTimeout(complete, 480);
-      }, 1400);
-      return () => {
-        window.clearTimeout(timer);
-        window.clearTimeout(fadeTimer);
-      };
+        window.setTimeout(complete, 350);
+      }, 700);
+      return () => window.clearTimeout(timer);
     }
 
     if (startedRef.current || !sceneReady) return;
@@ -109,15 +95,14 @@ export function EmberLoader() {
       const overlay = overlayRef.current;
       const tl = gsap.timeline({ onComplete: complete });
       timeline = tl;
-      tl.to(s, { assemble: 1, duration: 0.95, ease: "power2.inOut" }, 0.05)
-        .to(s, { flameReveal: 1, duration: 0.7, ease: "power3.out" }, 0.8)
-        .to(s, { disperse: 1, duration: 0.5, ease: "power2.in" }, 0.8)
-        .to(s, { fade: 0, duration: 0.4, ease: "power1.in" }, 1.05)
-        .to(overlay, { opacity: 0, duration: 0.5, ease: "power3.in" }, 1.78);
+      tl.to(s, { assemble: 1, duration: 0.55, ease: "power2.out" }, 0.02)
+        .to(s, { flameReveal: 1, duration: 0.45, ease: "power2.out" }, 0.4)
+        .to(s, { disperse: 1, duration: 0.35, ease: "power1.in" }, 0.5)
+        .to(s, { fade: 0, duration: 0.25, ease: "power1.in" }, 0.65)
+        .to(overlay, { opacity: 0, duration: 0.35, ease: "power2.inOut" }, 0.85);
     })().catch(() => {
-      // GSAP failed to load: CSS fade of the static mark instead.
       overlayRef.current?.classList.add("is-done");
-      window.setTimeout(complete, 500);
+      window.setTimeout(complete, 350);
     });
 
     return () => {
@@ -125,8 +110,6 @@ export function EmberLoader() {
     };
   }, [reducedMotion, done, webgl, sceneReady, complete]);
 
-  // The static mark ships in the SSR HTML (first paint shows the flame on
-  // charcoal); only the 3D layer waits for the client.
   if (done || reducedMotion) return null;
 
   return (

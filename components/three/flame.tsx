@@ -9,42 +9,30 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import {
-  CHARCOAL_BED_FRAGMENT,
-  CHARCOAL_BED_VERTEX,
-  FLAME_BLUE_BASE_FRAGMENT,
-  FLAME_BLUE_BASE_VERTEX,
   FLAME_CORE_FRAGMENT,
   FLAME_CORE_VERTEX,
   FLAME_FRAGMENT,
-  FLAME_OUTER_FRAGMENT,
-  FLAME_OUTER_VERTEX,
   FLAME_VERTEX,
 } from "./shaders";
 import { getFlameProfile } from "./isotype";
 
-type HyperrealisticFlameAssets = {
+type NaturalFlameAssets = {
   mainGeometry: THREE.BufferGeometry;
   coreGeometry: THREE.BufferGeometry;
-  outerGeometry: THREE.BufferGeometry;
-  blueBaseGeometry: THREE.BufferGeometry;
-  charcoalGeometry: THREE.BufferGeometry;
   centerTex: THREE.DataTexture;
   baseY: number;
   height: number;
 };
 
-let assetsCache: HyperrealisticFlameAssets | null = null;
+let assetsCache: NaturalFlameAssets | null = null;
 
 /**
- * Builds the 4K multi-shell geometries:
- * 1. Main flame lathe (silky 80x56 profile)
- * 2. Inner white-hot plasma core lathe
- * 3. Outer licking tendril whisps lathe
- * 4. Chemiluminescent blue root ring
- * 5. 3D Quebracho wood charcoal ember bed
+ * Builds the natural flame geometries:
+ * 1. Main flame lathe from the isotype's silhouette profile.
+ * 2. Soft inner core lathe.
  */
-function buildHyperrealisticAssets(): HyperrealisticFlameAssets {
-  const profile = getFlameProfile(80, 2.3);
+function buildNaturalAssets(): NaturalFlameAssets {
+  const profile = getFlameProfile(64, 2.1);
   const { rows, center, halfWidth, height } = profile;
 
   // 1. Main Flame Lathe
@@ -54,65 +42,16 @@ function buildHyperrealisticAssets(): HyperrealisticFlameAssets {
     const radius = i === 0 || i === rows - 1 ? 0.003 : Math.max(halfWidth[i], 0.005);
     mainPoints.push(new THREE.Vector2(radius, -height / 2 + v * height));
   }
-  const mainGeometry = new THREE.LatheGeometry(mainPoints, 56);
+  const mainGeometry = new THREE.LatheGeometry(mainPoints, 44);
 
-  // 2. Inner Plasma Core Lathe (Concentrated core)
+  // 2. Soft Inner Core Lathe
   const corePoints: THREE.Vector2[] = [];
   for (let i = 0; i < rows; i++) {
     const v = i / (rows - 1);
-    const radius = i === 0 || i === rows - 1 ? 0.002 : Math.max(halfWidth[i] * 0.62, 0.003);
-    corePoints.push(new THREE.Vector2(radius, -height / 2 + v * (height * 0.88)));
+    const radius = i === 0 || i === rows - 1 ? 0.002 : Math.max(halfWidth[i] * 0.58, 0.003);
+    corePoints.push(new THREE.Vector2(radius, -height / 2 + v * (height * 0.82)));
   }
-  const coreGeometry = new THREE.LatheGeometry(corePoints, 44);
-
-  // 3. Outer Whisps & Licking Tendril Lathe
-  const outerPoints: THREE.Vector2[] = [];
-  for (let i = 0; i < rows; i++) {
-    const v = i / (rows - 1);
-    const radius = i === 0 || i === rows - 1 ? 0.004 : Math.max(halfWidth[i] * 1.14, 0.007);
-    outerPoints.push(new THREE.Vector2(radius, -height / 2 + v * (height * 1.12)));
-  }
-  const outerGeometry = new THREE.LatheGeometry(outerPoints, 48);
-
-  // 4. Blue Combustion Radical Foot
-  const blueRows = Math.floor(rows * 0.32);
-  const bluePoints: THREE.Vector2[] = [];
-  for (let i = 0; i < blueRows; i++) {
-    const v = i / (rows - 1);
-    const radius = Math.max(halfWidth[i] * 1.05, 0.005);
-    bluePoints.push(new THREE.Vector2(radius, -height / 2 + v * height));
-  }
-  const blueBaseGeometry = new THREE.LatheGeometry(bluePoints, 44);
-
-  // 5. 3D Charcoal Ember Bed (Quebracho Coals)
-  const charcoalRadius = 0.82;
-  const charcoalHeight = 0.18;
-  const charcoalGeometry = new THREE.CylinderGeometry(
-    charcoalRadius * 0.95,
-    charcoalRadius * 1.15,
-    charcoalHeight,
-    36,
-    6
-  );
-  const cPos = charcoalGeometry.attributes.position;
-  for (let i = 0; i < cPos.count; i++) {
-    const x = cPos.getX(i);
-    const y = cPos.getY(i);
-    const z = cPos.getZ(i);
-    const angle = Math.atan2(z, x);
-    const r = Math.hypot(x, z);
-    const noise =
-      Math.sin(angle * 8) * 0.045 +
-      Math.cos(angle * 14) * 0.025 +
-      Math.sin(y * 24) * 0.02;
-    cPos.setXYZ(
-      i,
-      x + (x / (r || 1)) * noise,
-      y + Math.sin(x * 10 + z * 10) * 0.02 - 0.02,
-      z + (z / (r || 1)) * noise
-    );
-  }
-  charcoalGeometry.computeVertexNormals();
+  const coreGeometry = new THREE.LatheGeometry(corePoints, 36);
 
   // 1D center-line texture
   const data = new Uint8Array(rows);
@@ -127,9 +66,6 @@ function buildHyperrealisticAssets(): HyperrealisticFlameAssets {
   return {
     mainGeometry,
     coreGeometry,
-    outerGeometry,
-    blueBaseGeometry,
-    charcoalGeometry,
     centerTex,
     baseY: -height / 2,
     height,
@@ -137,19 +73,17 @@ function buildHyperrealisticAssets(): HyperrealisticFlameAssets {
 }
 
 function getAssets() {
-  if (!assetsCache) assetsCache = buildHyperrealisticAssets();
+  if (!assetsCache) assetsCache = buildNaturalAssets();
   return assetsCache;
 }
 
 /**
- * Hyperrealistic 4K Volumetric Flame & Embers System.
+ * Natural Wood Flame System.
  *
  * Renders:
- * - 3D Incandescent charcoal ember bed at the base.
- * - Chemiluminescent oxygen-blue combustion root.
- * - Multi-layered fluid volumetric flame with 3D divergence-free curl noise.
- * - Inner white-hot plasma core.
- * - Outer dancing flame tendrils & whisps.
+ * - Fluid volumetric flame with 3D curl noise and blackbody temperature gradient.
+ * - Soft inner incandescent honey-gold core.
+ * - Perfectly feathered alpha envelope (zero clipping or square box boundaries).
  */
 export function FlameMesh({
   heatRef,
@@ -157,7 +91,6 @@ export function FlameMesh({
   initialReveal = 0,
   seed = 11,
   animate = true,
-  showCharcoal = true,
   onPointerMove,
   onPointerLeave,
   onClick,
@@ -175,7 +108,7 @@ export function FlameMesh({
   const assets = useMemo(() => getAssets(), []);
   const timeRef = useRef(animate ? 0 : 2.8);
 
-  // 1. Main Flame Material
+  // 1. Main Volumetric Flame Material
   const mainMaterial = useMemo(
     () =>
       new THREE.ShaderMaterial({
@@ -197,7 +130,7 @@ export function FlameMesh({
     [assets, initialReveal, seed]
   );
 
-  // 2. Inner White-Hot Plasma Core Material
+  // 2. Soft Inner Core Material
   const coreMaterial = useMemo(
     () =>
       new THREE.ShaderMaterial({
@@ -205,7 +138,6 @@ export function FlameMesh({
         fragmentShader: FLAME_CORE_FRAGMENT,
         transparent: true,
         depthWrite: false,
-        blending: THREE.AdditiveBlending,
         side: THREE.DoubleSide,
         uniforms: {
           uTime: { value: 0 },
@@ -220,84 +152,18 @@ export function FlameMesh({
     [assets, initialReveal, seed]
   );
 
-  // 3. Outer Whisps & Licking Tendrils Material
-  const outerMaterial = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        vertexShader: FLAME_OUTER_VERTEX,
-        fragmentShader: FLAME_OUTER_FRAGMENT,
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        side: THREE.DoubleSide,
-        uniforms: {
-          uTime: { value: 0 },
-          uHeat: { value: 0 },
-          uReveal: { value: initialReveal },
-          uSeed: { value: seed * 0.83 + 3.4 },
-          uBaseY: { value: assets.baseY },
-          uHeight: { value: assets.height },
-          uCenter: { value: assets.centerTex },
-        },
-      }),
-    [assets, initialReveal, seed]
-  );
-
-  // 4. Chemiluminescent Blue Root Material
-  const blueBaseMaterial = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        vertexShader: FLAME_BLUE_BASE_VERTEX,
-        fragmentShader: FLAME_BLUE_BASE_FRAGMENT,
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        side: THREE.DoubleSide,
-        uniforms: {
-          uTime: { value: 0 },
-          uHeat: { value: 0 },
-          uReveal: { value: initialReveal },
-          uSeed: { value: seed * 0.25 },
-          uBaseY: { value: assets.baseY },
-          uHeight: { value: assets.height },
-          uCenter: { value: assets.centerTex },
-        },
-      }),
-    [assets, initialReveal, seed]
-  );
-
-  // 5. Incandescent Charcoal Ember Bed Material
-  const charcoalMaterial = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        vertexShader: CHARCOAL_BED_VERTEX,
-        fragmentShader: CHARCOAL_BED_FRAGMENT,
-        transparent: true,
-        uniforms: {
-          uTime: { value: 0 },
-          uHeat: { value: 0 },
-          uReveal: { value: initialReveal },
-        },
-      }),
-    [initialReveal]
-  );
-
-  // Clean up materials on unmount
   useEffect(
     () => () => {
       mainMaterial.dispose();
       coreMaterial.dispose();
-      outerMaterial.dispose();
-      blueBaseMaterial.dispose();
-      charcoalMaterial.dispose();
     },
-    [mainMaterial, coreMaterial, outerMaterial, blueBaseMaterial, charcoalMaterial]
+    [mainMaterial, coreMaterial]
   );
 
   useFrame((_, delta) => {
     const heat = heatRef.current;
     if (animate) {
-      timeRef.current += Math.min(delta, 0.05) * (0.65 + heat * 0.85);
+      timeRef.current += Math.min(delta, 0.05) * (0.55 + heat * 0.65);
     }
     const t = timeRef.current;
     const rev = revealRef ? revealRef.current : 1;
@@ -309,18 +175,6 @@ export function FlameMesh({
     coreMaterial.uniforms.uTime.value = t;
     coreMaterial.uniforms.uHeat.value = heat;
     coreMaterial.uniforms.uReveal.value = rev;
-
-    outerMaterial.uniforms.uTime.value = t;
-    outerMaterial.uniforms.uHeat.value = heat;
-    outerMaterial.uniforms.uReveal.value = rev;
-
-    blueBaseMaterial.uniforms.uTime.value = t;
-    blueBaseMaterial.uniforms.uHeat.value = heat;
-    blueBaseMaterial.uniforms.uReveal.value = rev;
-
-    charcoalMaterial.uniforms.uTime.value = t;
-    charcoalMaterial.uniforms.uHeat.value = heat;
-    charcoalMaterial.uniforms.uReveal.value = rev;
   });
 
   return (
@@ -329,42 +183,18 @@ export function FlameMesh({
       onPointerLeave={onPointerLeave}
       onClick={onClick}
     >
-      {/* 3D Incandescent Charcoal Bed / Quebracho Coals */}
-      {showCharcoal && (
-        <mesh
-          geometry={assets.charcoalGeometry}
-          material={charcoalMaterial}
-          position={[0, assets.baseY - 0.04, 0]}
-          renderOrder={0}
-        />
-      )}
-
-      {/* Chemiluminescent Blue Root */}
+      {/* Soft Inner Core */}
       <mesh
-        geometry={assets.blueBaseGeometry}
-        material={blueBaseMaterial}
+        geometry={assets.coreGeometry}
+        material={coreMaterial}
         renderOrder={1}
       />
 
-      {/* Main Volumetric Flame Shell */}
+      {/* Main Natural Flame */}
       <mesh
         geometry={assets.mainGeometry}
         material={mainMaterial}
         renderOrder={2}
-      />
-
-      {/* Inner White-Hot Plasma Core */}
-      <mesh
-        geometry={assets.coreGeometry}
-        material={coreMaterial}
-        renderOrder={3}
-      />
-
-      {/* Outer Licking Whisps & Tendrils */}
-      <mesh
-        geometry={assets.outerGeometry}
-        material={outerMaterial}
-        renderOrder={4}
       />
     </group>
   );

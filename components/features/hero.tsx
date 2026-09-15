@@ -170,7 +170,7 @@ export function Hero() {
           <div ref={haloRef} className="absolute inset-0">
             <div className="hero-halo absolute inset-0" aria-hidden="true" />
           </div>
-          <FlameFallback />
+          {(!ready || !webgl) && <FlameFallback />}
           {ready && webgl && inView && (
             <div className="absolute inset-0">
               <HeroFlameScene reducedMotion={reducedMotion} haloRef={haloRef} />
