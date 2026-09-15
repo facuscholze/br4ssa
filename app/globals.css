@@ -321,6 +321,84 @@ html.custom-cursor-active * {
   }
 }
 
+/* --- Lenis smooth scroll (setup recommended by the library) --- */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+html.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+/* --- Ember loader --- */
+.ember-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #14100d;
+  transition: opacity 0.45s var(--ease-brand);
+}
+.ember-loader.is-done {
+  opacity: 0;
+  pointer-events: none;
+}
+.ember-loader__mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: opacity 0.4s var(--ease-brand);
+}
+.ember-loader__flame {
+  width: 58px;
+  height: 58px;
+  filter: drop-shadow(0 0 26px rgba(255, 122, 61, 0.55));
+  animation: flame-flicker 2.4s ease-in-out infinite;
+}
+.ember-loader__word {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--bone);
+}
+.ember-loader__tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+}
+
+/* --- Hero 3D: soft ember halo behind the coal (matches .text-glow rhythm) --- */
+.hero-halo {
+  background: radial-gradient(
+    60% 58% at 50% 56%,
+    rgba(255, 122, 61, 0.2) 0%,
+    rgba(232, 85, 29, 0.09) 45%,
+    rgba(20, 16, 13, 0) 74%
+  );
+  animation: halo-breathe 3.4s var(--ease-brand) infinite;
+}
+
+@keyframes halo-breathe {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
 /* Ticker band: the track renders its content 5x (one track can be narrower
    than very wide/4K viewports, and too few copies leave a visible gap near
    the loop point), so -20% is one full loop. */

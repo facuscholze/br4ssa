@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { EmberLoader } from "@/components/loader/ember-loader";
 import { ScrollProgress } from "@/components/layout/scroll-progress";
 import { WhatsAppFloat } from "@/components/layout/whatsapp-float";
 import { EmberDivider } from "@/components/motion/ember-divider";
@@ -18,6 +19,7 @@ export default function Home() {
     <>
       <ScrollProgress />
       <Header />
+      <EmberLoader />
       <main id="main">
         <Hero />
         <Marquee />
