@@ -11,19 +11,14 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { SPARK_FRAGMENT, SPARK_VERTEX } from "./shaders";
 
-export const MAX_SPARKS = 260;
+export const MAX_SPARKS = 70;
 
-/**
- * Shared control channel between the scene and the spark system.
- * `heat` scales the ambient ember rate/lift (rest → hover → surge);
- * `burst` is a one-shot pool of extra sparks (the click "avivamiento").
- */
 export type SparkControl = { heat: number; burst: number };
 
 /**
- * Ember sparks rising off the flame's base — one draw call for the whole
- * pool (no textures, additive blend). Spawn rate and lift scale with heat;
- * a click pours a burst that arcs out and falls like real embers.
+ * Natural Ember Sparks Simulation.
+ *
+ * Lightweight, gentle sparks floating naturally above the flame.
  */
 export function SparkSystem({
   controlRef,
@@ -40,6 +35,7 @@ export function SparkSystem({
     life.setUsage(THREE.DynamicDrawUsage);
     const size = new THREE.BufferAttribute(new Float32Array(MAX_SPARKS), 1);
     const tint = new THREE.BufferAttribute(new Float32Array(MAX_SPARKS), 1);
+
     geo.setAttribute("position", position);
     geo.setAttribute("aLife", life);
     geo.setAttribute("aSize", size);
@@ -69,6 +65,7 @@ export function SparkSystem({
     maxLife: new Float32Array(MAX_SPARKS),
     cursor: 0,
     ambientClock: 0,
+    time: 0,
     tmp: new THREE.Vector3(),
   });
 
@@ -85,90 +82,102 @@ export function SparkSystem({
     const i = s.cursor;
     s.cursor = (s.cursor + 1) % MAX_SPARKS;
     const ix = i * 3;
-    const position = geometry.attributes.position as THREE.BufferAttribute;
-    const size = geometry.attributes.aSize as THREE.BufferAttribute;
-    const tint = geometry.attributes.aTint as THREE.BufferAttribute;
 
-    position.array[ix] = at.x + (Math.random() - 0.5) * 0.08;
-    position.array[ix + 1] = at.y + (Math.random() - 0.5) * 0.08;
-    position.array[ix + 2] = at.z + (Math.random() - 0.5) * 0.08;
+    const posAttr = geometry.attributes.position as THREE.BufferAttribute;
+    const sizeAttr = geometry.attributes.aSize as THREE.BufferAttribute;
+    const tintAttr = geometry.attributes.aTint as THREE.BufferAttribute;
+
+    posAttr.array[ix] = at.x + (Math.random() - 0.5) * 0.12;
+    posAttr.array[ix + 1] = at.y + (Math.random() - 0.5) * 0.08;
+    posAttr.array[ix + 2] = at.z + (Math.random() - 0.5) * 0.12;
 
     const heat = controlRef.current.heat;
+
     if (burst) {
-      // The "avivamiento": a strong whoosh of embers, wide and high.
-      s.velocity[ix] = (Math.random() - 0.5) * 1.1;
-      s.velocity[ix + 1] = 0.9 + Math.random() * 0.9;
-      s.velocity[ix + 2] = (Math.random() - 0.5) * 1.1;
-      s.maxLife[i] = 0.7 + Math.random() * 0.7;
-      size.array[i] = 0.034 + Math.random() * 0.05;
+      // Gentle burst on click
+      s.velocity[ix] = (Math.random() - 0.5) * 0.6;
+      s.velocity[ix + 1] = 0.8 + Math.random() * 0.7;
+      s.velocity[ix + 2] = (Math.random() - 0.5) * 0.5;
+      s.maxLife[i] = 0.8 + Math.random() * 0.6;
+      sizeAttr.array[i] = 0.024 + Math.random() * 0.02;
     } else {
-      // Ambient embers: steady rise, livelier as the flame heats up.
-      s.velocity[ix] = (Math.random() - 0.5) * (0.4 + heat * 0.3);
-      s.velocity[ix + 1] = 0.35 + Math.random() * 0.55 + heat * 0.5;
-      s.velocity[ix + 2] = (Math.random() - 0.5) * (0.4 + heat * 0.3);
-      s.maxLife[i] = 0.55 + Math.random() * 0.6 + heat * 0.15;
-      size.array[i] = 0.026 + Math.random() * 0.04 + heat * 0.012;
+      // Natural ambient embers
+      s.velocity[ix] = (Math.random() - 0.5) * (0.15 + heat * 0.15);
+      s.velocity[ix + 1] = 0.35 + Math.random() * 0.35 + heat * 0.3;
+      s.velocity[ix + 2] = (Math.random() - 0.5) * (0.15 + heat * 0.15);
+      s.maxLife[i] = 0.6 + Math.random() * 0.6 + heat * 0.2;
+      sizeAttr.array[i] = 0.016 + Math.random() * 0.018;
     }
 
     s.life[i] = 1;
-    tint.array[i] = Math.random();
-    size.needsUpdate = true;
-    tint.needsUpdate = true;
+    tintAttr.array[i] = Math.random();
+    sizeAttr.needsUpdate = true;
+    tintAttr.needsUpdate = true;
   };
 
   useFrame((state, delta) => {
     const s = sim.current;
     const dt = Math.min(delta, 0.05);
+    s.time += dt;
     const control = controlRef.current;
     const heat = control.heat;
-    const position = geometry.attributes.position as THREE.BufferAttribute;
-    const life = geometry.attributes.aLife as THREE.BufferAttribute;
 
-    // Ambient embers from the flame's base — rate scales with heat.
-    const interval = 0.16 / (1 + heat * 2.4);
+    const posAttr = geometry.attributes.position as THREE.BufferAttribute;
+    const lifeAttr = geometry.attributes.aLife as THREE.BufferAttribute;
+
+    // Gentle ambient spawn rate
+    const interval = 0.22 / (1 + heat * 1.5);
     s.ambientClock += dt;
     while (s.ambientClock >= interval) {
       s.ambientClock -= interval;
       s.tmp.set(
-        base.x + (Math.random() - 0.5) * 1.0,
-        base.y + (Math.random() - 0.5) * 0.3,
-        base.z + (Math.random() - 0.5) * 1.0
+        base.x + (Math.random() - 0.5) * 0.5,
+        base.y + (Math.random() - 0.5) * 0.15,
+        base.z + (Math.random() - 0.5) * 0.5
       );
       spawn(s.tmp, false);
     }
 
-    // Click burst, drained a few sparks per frame (a short whoosh).
+    // Process click burst
     if (control.burst > 0) {
-      const n = Math.min(6, Math.floor(control.burst));
+      const n = Math.min(4, Math.floor(control.burst));
       for (let i = 0; i < n; i++) {
         s.tmp.set(
-          base.x + (Math.random() - 0.5) * 0.7,
-          base.y + (Math.random() - 0.5) * 0.2,
-          base.z + (Math.random() - 0.5) * 0.7
+          base.x + (Math.random() - 0.5) * 0.4,
+          base.y + (Math.random() - 0.5) * 0.1,
+          base.z + (Math.random() - 0.5) * 0.4
         );
         spawn(s.tmp, true);
       }
       control.burst -= n;
     }
 
+    // Physical integration
     for (let i = 0; i < MAX_SPARKS; i++) {
       if (s.life[i] <= 0) continue;
       s.life[i] = Math.max(0, s.life[i] - dt / s.maxLife[i]);
       const ix = i * 3;
-      s.velocity[ix + 1] -= 1.7 * dt; // embers arc and fall
-      const drag = Math.max(0, 1 - 1.5 * dt);
+
+      // Gentle upward thermal draft & drag
+      s.velocity[ix + 1] -= 0.6 * dt;
+      const drag = Math.max(0, 1 - 0.8 * dt);
       s.velocity[ix] *= drag;
       s.velocity[ix + 1] *= drag;
       s.velocity[ix + 2] *= drag;
-      position.array[ix] += s.velocity[ix] * dt;
-      position.array[ix + 1] += s.velocity[ix + 1] * dt;
-      position.array[ix + 2] += s.velocity[ix + 2] * dt;
-      life.array[i] = s.life[i];
-    }
-    position.needsUpdate = true;
-    life.needsUpdate = true;
 
-    // Pixels per world unit at distance 1, for point sizing.
+      // Soft natural drift
+      s.velocity[ix] += Math.sin(s.time * 2.0 + i) * 0.15 * dt;
+
+      posAttr.array[ix] += s.velocity[ix] * dt;
+      posAttr.array[ix + 1] += s.velocity[ix + 1] * dt;
+      posAttr.array[ix + 2] += s.velocity[ix + 2] * dt;
+
+      lifeAttr.array[i] = s.life[i];
+    }
+
+    posAttr.needsUpdate = true;
+    lifeAttr.needsUpdate = true;
+
     const camera = state.camera as THREE.PerspectiveCamera;
     const fov = camera.fov ?? 42;
     material.uniforms.uPointScale.value =
@@ -181,7 +190,7 @@ export function SparkSystem({
       geometry={geometry}
       material={material}
       frustumCulled={false}
-      renderOrder={2}
+      renderOrder={3}
     />
   );
 }

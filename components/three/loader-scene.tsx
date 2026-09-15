@@ -12,7 +12,7 @@ import { FlameMesh } from "./flame";
 import { getBrasaTargets, targetsToWorld } from "./isotype";
 import { LOADER_FRAGMENT, LOADER_VERTEX } from "./shaders";
 
-const COUNT = 1100;
+const COUNT = 380;
 
 export type LoaderState = {
   assemble: number;
@@ -21,12 +21,11 @@ export type LoaderState = {
   flameReveal: number;
 };
 
-/** Builds the particle buffers. Impure on purpose: the ember scatter is
- *  randomized per load. Runs once per mount (client-only). */
+/** Builds the lightweight particle buffer for smooth convergence */
 function buildParticlesGeometry(count: number) {
   const targets = getBrasaTargets(count);
   const world = new Float32Array(count * 3);
-  targetsToWorld(targets, world);
+  targetsToWorld(targets, world, 1.9);
 
   const start = new Float32Array(count * 3);
   const scatter = new Float32Array(count * 3);
@@ -37,28 +36,26 @@ function buildParticlesGeometry(count: number) {
   for (let i = 0; i < count; i++) {
     const i3 = i * 3;
     const angle = Math.random() * Math.PI * 2;
-    const radius = 2.1 + Math.random() * 2.4;
-    start[i3] = Math.cos(angle) * radius * (0.7 + Math.random() * 0.6);
-    start[i3 + 1] = (Math.random() - 0.5) * (2.6 + Math.random() * 2.2);
-    start[i3 + 2] = -0.6 + Math.random() * 1.4;
+    const radius = 1.6 + Math.random() * 2.0;
+    start[i3] = Math.cos(angle) * radius;
+    start[i3 + 1] = (Math.random() - 0.5) * 2.2;
+    start[i3 + 2] = -0.4 + Math.random() * 1.0;
 
     const sx = Math.random() - 0.5;
-    const sy = 0.2 + Math.random() * 1.4;
+    const sy = 0.2 + Math.random() * 1.2;
     const sz = Math.random() - 0.5;
     const length = Math.hypot(sx, sy, sz) || 1;
-    const distance = 1.4 + Math.random() * 2.6;
+    const distance = 1.2 + Math.random() * 2.0;
     scatter[i3] = (sx / length) * distance;
     scatter[i3 + 1] = (sy / length) * distance;
     scatter[i3 + 2] = (sz / length) * distance * 0.5;
 
-    delay[i] = Math.random() * 0.9;
-    size[i] = 0.016 + Math.random() * 0.03;
+    delay[i] = Math.random() * 0.8;
+    size[i] = 0.016 + Math.random() * 0.024;
     tint[i] = Math.random();
   }
 
   const geo = new THREE.BufferGeometry();
-  // `position` exists only to define the draw range; the vertex shader
-  // works from aStart/aTarget.
   geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(count * 3), 3));
   geo.setAttribute("aStart", new THREE.BufferAttribute(start, 3));
   geo.setAttribute("aTarget", new THREE.BufferAttribute(world, 3));
@@ -66,12 +63,11 @@ function buildParticlesGeometry(count: number) {
   geo.setAttribute("aDelay", new THREE.BufferAttribute(delay, 1));
   geo.setAttribute("aSize", new THREE.BufferAttribute(size, 1));
   geo.setAttribute("aTint", new THREE.BufferAttribute(tint, 1));
-  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 100);
+  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 50);
   return geo;
 }
 
 function Particles({ stateRef }: { stateRef: { current: LoaderState } }) {
-  // Built once per mount; the random ember scatter is intentional per load.
   const geometry = useMemo(() => buildParticlesGeometry(COUNT), []);
 
   const material = useMemo(
@@ -84,7 +80,7 @@ function Particles({ stateRef }: { stateRef: { current: LoaderState } }) {
           uDisperse: { value: 0 },
           uFade: { value: 1 },
           uTime: { value: 0 },
-          uPointScale: { value: 900 },
+          uPointScale: { value: 800 },
         },
         transparent: true,
         depthWrite: false,
@@ -119,8 +115,7 @@ function Particles({ stateRef }: { stateRef: { current: LoaderState } }) {
 function Contents({ stateRef }: { stateRef: { current: LoaderState } }) {
   const flameGroup = useRef<THREE.Group>(null);
   const flameReveal = useRef(0);
-  // A calm, steady fire while the mark dissolves into it.
-  const baseHeat = useRef(0.25);
+  const baseHeat = useRef(0.2);
 
   useFrame(() => {
     const s = stateRef.current;
@@ -148,11 +143,6 @@ function Contents({ stateRef }: { stateRef: { current: LoaderState } }) {
   );
 }
 
-/**
- * The loader's 3D layer: ~1100 ember particles converging on the Brasa flame
- * isotype, then dispersing while the 3D flame ignites in the same silhouette.
- * Loaded via next/dynamic (ssr: false) — the static mark shows until ready.
- */
 export default function LoaderScene({
   stateRef,
   onCreated,
@@ -162,8 +152,8 @@ export default function LoaderScene({
 }) {
   return (
     <Canvas
-      dpr={[1, 1.75]}
-      camera={{ position: [0, 0, 6.2], fov: 42 }}
+      dpr={[1, 1.5]}
+      camera={{ position: [0, 0, 5.8], fov: 40 }}
       gl={{ antialias: true, alpha: true }}
       frameloop="always"
       onCreated={onCreated}
