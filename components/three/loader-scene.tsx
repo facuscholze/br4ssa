@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { CoalMesh } from "./coal";
+import { FlameMesh } from "./flame";
 import { getBrasaTargets, targetsToWorld } from "./isotype";
 import { LOADER_FRAGMENT, LOADER_VERTEX } from "./shaders";
 
@@ -18,7 +18,7 @@ export type LoaderState = {
   assemble: number;
   disperse: number;
   fade: number;
-  coalReveal: number;
+  flameReveal: number;
 };
 
 /** Builds the particle buffers. Impure on purpose: the ember scatter is
@@ -117,25 +117,32 @@ function Particles({ stateRef }: { stateRef: { current: LoaderState } }) {
 }
 
 function Contents({ stateRef }: { stateRef: { current: LoaderState } }) {
-  const coalGroup = useRef<THREE.Group>(null);
-  const coalReveal = useRef(0);
+  const flameGroup = useRef<THREE.Group>(null);
+  const flameReveal = useRef(0);
+  // A calm, steady fire while the mark dissolves into it.
+  const baseHeat = useRef(0.25);
 
-  useFrame((state) => {
+  useFrame(() => {
     const s = stateRef.current;
-    coalReveal.current = s.coalReveal;
-    const group = coalGroup.current;
+    flameReveal.current = s.flameReveal;
+    const group = flameGroup.current;
     if (group) {
-      const eased = 1 - (1 - s.coalReveal) * (1 - s.coalReveal);
+      const eased = 1 - (1 - s.flameReveal) * (1 - s.flameReveal);
       group.scale.setScalar(0.55 + 0.45 * eased);
-      group.rotation.y = state.clock.elapsedTime * 0.5;
     }
   });
 
   return (
     <>
       <Particles stateRef={stateRef} />
-      <group ref={coalGroup} scale={0.55}>
-        <CoalMesh seed={23} revealRef={coalReveal} animate timeOffset={1.7} />
+      <group ref={flameGroup} scale={0.55}>
+        <FlameMesh
+          heatRef={baseHeat}
+          revealRef={flameReveal}
+          initialReveal={0}
+          animate
+          seed={23}
+        />
       </group>
     </>
   );
@@ -143,8 +150,8 @@ function Contents({ stateRef }: { stateRef: { current: LoaderState } }) {
 
 /**
  * The loader's 3D layer: ~1100 ember particles converging on the Brasa flame
- * isotype, then dispersing while the incandescent coal takes over. Loaded
- * via next/dynamic (ssr: false) — the static mark shows until it is ready.
+ * isotype, then dispersing while the 3D flame ignites in the same silhouette.
+ * Loaded via next/dynamic (ssr: false) — the static mark shows until ready.
  */
 export default function LoaderScene({
   stateRef,

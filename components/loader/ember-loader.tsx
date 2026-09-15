@@ -49,7 +49,7 @@ export function EmberLoader() {
     assemble: 0,
     disperse: 0,
     fade: 1,
-    coalReveal: 0,
+    flameReveal: 0,
   });
   const startedRef = useRef(false);
   const finishedRef = useRef(false);
@@ -110,7 +110,7 @@ export function EmberLoader() {
       const tl = gsap.timeline({ onComplete: complete });
       timeline = tl;
       tl.to(s, { assemble: 1, duration: 0.95, ease: "power2.inOut" }, 0.05)
-        .to(s, { coalReveal: 1, duration: 0.7, ease: "power3.out" }, 0.8)
+        .to(s, { flameReveal: 1, duration: 0.7, ease: "power3.out" }, 0.8)
         .to(s, { disperse: 1, duration: 0.5, ease: "power2.in" }, 0.8)
         .to(s, { fade: 0, duration: 0.4, ease: "power1.in" }, 1.05)
         .to(overlay, { opacity: 0, duration: 0.5, ease: "power3.in" }, 1.78);

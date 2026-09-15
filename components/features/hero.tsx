@@ -12,8 +12,8 @@ import { useWebGL } from "@/lib/webgl";
 import { EASE_CSS } from "@/lib/motion";
 import { REVIEWS, STATS } from "@/lib/data";
 
-const HeroCoalScene = dynamic(
-  () => import("@/components/three/hero-coal-scene"),
+const HeroFlameScene = dynamic(
+  () => import("@/components/three/hero-flame-scene"),
   { ssr: false }
 );
 
@@ -69,6 +69,10 @@ export function Hero() {
   const ready = useBrasaReady() || reducedMotion;
   const webgl = useWebGL();
   const [inView, setInView] = useState(true);
+  // The CSS halo's opacity is driven per-frame by the 3D scene so it breathes
+  // with the fire (hover/click). Wrapped: the keyframe animation keeps the
+  // inner .hero-halo pulsing underneath the scene-set opacity.
+  const haloRef = useRef<HTMLDivElement>(null);
 
   // Keep the 3D scene alive only while the hero is on screen.
   useEffect(() => {
@@ -82,7 +86,7 @@ export function Hero() {
     return () => observer.disconnect();
   }, []);
 
-  // Exit scrub: text and coal drift apart on the way to "Nuestra historia".
+  // Exit scrub: text and flame drift apart on the way to "Nuestra historia".
   // ScrollTrigger is driven by Lenis's rAF (see lib/lenis.ts).
   useEffect(() => {
     if (reducedMotion || !ready) return;
@@ -99,7 +103,7 @@ export function Hero() {
       gsap.registerPlugin(ScrollTrigger);
       ctx = gsap.context(() => {
         const content = section.querySelector(".hero-content");
-        const coal = section.querySelector(".hero-coal");
+        const flame = section.querySelector(".hero-flame");
         gsap.to(content, {
           autoAlpha: 0,
           y: -60,
@@ -111,7 +115,7 @@ export function Hero() {
             scrub: 0.6,
           },
         });
-        gsap.to(coal, {
+        gsap.to(flame, {
           autoAlpha: 0,
           y: 70,
           scale: 0.94,
@@ -158,16 +162,18 @@ export function Hero() {
       <CursorGlow />
 
       <div className="relative z-[2] mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center gap-8 px-6 pb-24 pt-28 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,42%)] lg:items-center lg:gap-16 lg:px-12 lg:pb-10 lg:pt-24">
-        {/* 3D coal — above the text on mobile, right side on desktop */}
+        {/* 3D flame — above the text on mobile, right side on desktop */}
         <div
-          className="hero-coal hero-gated relative h-[34svh] min-h-[240px] w-full lg:order-2 lg:h-[64svh] lg:min-h-[440px]"
+          className="hero-flame hero-gated relative h-[34svh] min-h-[240px] w-full lg:order-2 lg:h-[64svh] lg:min-h-[440px]"
           style={ready ? undefined : { opacity: 0 }}
         >
-          <div className="hero-halo absolute inset-0" aria-hidden="true" />
+          <div ref={haloRef} className="absolute inset-0">
+            <div className="hero-halo absolute inset-0" aria-hidden="true" />
+          </div>
           <FlameFallback />
           {ready && webgl && inView && (
             <div className="absolute inset-0">
-              <HeroCoalScene reducedMotion={reducedMotion} />
+              <HeroFlameScene reducedMotion={reducedMotion} haloRef={haloRef} />
             </div>
           )}
         </div>

@@ -13,28 +13,24 @@ import { SPARK_FRAGMENT, SPARK_VERTEX } from "./shaders";
 
 export const MAX_SPARKS = 260;
 
-/** Raycast hit on the coal mesh, fed to the spark system each frame. */
-export type SparkHit = {
-  point: THREE.Vector3;
-  normal: THREE.Vector3;
-  speed: number;
-  active: boolean;
-};
+/**
+ * Shared control channel between the scene and the spark system.
+ * `heat` scales the ambient ember rate/lift (rest → hover → surge);
+ * `burst` is a one-shot pool of extra sparks (the click "avivamiento").
+ */
+export type SparkControl = { heat: number; burst: number };
 
 /**
- * Ember spark system — the "estela de chispas". A fixed pool rendered as a
- * single THREE.Points draw call (no textures, additive blend). Two spawn
- * modes: sparks kicked off the coal surface while the pointer hovers it,
- * and slow ambient embers rising off the coal's crown.
+ * Ember sparks rising off the flame's base — one draw call for the whole
+ * pool (no textures, additive blend). Spawn rate and lift scale with heat;
+ * a click pours a burst that arcs out and falls like real embers.
  */
 export function SparkSystem({
-  hitRef,
-  ambient,
-  quality = 1,
+  controlRef,
+  base,
 }: {
-  hitRef: { current: SparkHit };
-  ambient: { x: number; y: number; z: number } | null;
-  quality?: number;
+  controlRef: { current: SparkControl };
+  base: { x: number; y: number; z: number };
 }) {
   const geometry = useMemo(() => {
     const geo = new THREE.BufferGeometry();
@@ -74,8 +70,6 @@ export function SparkSystem({
     cursor: 0,
     ambientClock: 0,
     tmp: new THREE.Vector3(),
-    tangent: new THREE.Vector3(),
-    up: new THREE.Vector3(0, 1, 0),
   });
 
   useEffect(
@@ -86,11 +80,7 @@ export function SparkSystem({
     [geometry, material]
   );
 
-  const spawn = (
-    at: THREE.Vector3,
-    normal: THREE.Vector3 | null,
-    boost: number
-  ) => {
+  const spawn = (at: THREE.Vector3, burst: boolean) => {
     const s = sim.current;
     const i = s.cursor;
     s.cursor = (s.cursor + 1) % MAX_SPARKS;
@@ -103,27 +93,24 @@ export function SparkSystem({
     position.array[ix + 1] = at.y + (Math.random() - 0.5) * 0.08;
     position.array[ix + 2] = at.z + (Math.random() - 0.5) * 0.08;
 
-    if (normal) {
-      // Kick along the surface normal + random tangent + upward bias:
-      // real sparks arc off the coal, they don't slide along a trail.
-      s.tangent.crossVectors(normal, s.up);
-      if (s.tangent.lengthSq() < 0.01) s.tangent.set(1, 0, 0);
-      s.tangent.normalize();
-      const kick = 0.22 + Math.random() * 0.5 + boost * 0.25;
-      const sway = (Math.random() - 0.5) * (0.5 + boost * 0.6);
-      const lift = 0.35 + Math.random() * 0.7 + boost * 0.2;
-      s.velocity[ix] = normal.x * kick + s.tangent.x * sway;
-      s.velocity[ix + 1] = normal.y * kick + lift;
-      s.velocity[ix + 2] = normal.z * kick + s.tangent.z * sway;
+    const heat = controlRef.current.heat;
+    if (burst) {
+      // The "avivamiento": a strong whoosh of embers, wide and high.
+      s.velocity[ix] = (Math.random() - 0.5) * 1.1;
+      s.velocity[ix + 1] = 0.9 + Math.random() * 0.9;
+      s.velocity[ix + 2] = (Math.random() - 0.5) * 1.1;
+      s.maxLife[i] = 0.7 + Math.random() * 0.7;
+      size.array[i] = 0.034 + Math.random() * 0.05;
     } else {
-      s.velocity[ix] = (Math.random() - 0.5) * 0.3;
-      s.velocity[ix + 1] = 0.3 + Math.random() * 0.5;
-      s.velocity[ix + 2] = (Math.random() - 0.5) * 0.3;
+      // Ambient embers: steady rise, livelier as the flame heats up.
+      s.velocity[ix] = (Math.random() - 0.5) * (0.4 + heat * 0.3);
+      s.velocity[ix + 1] = 0.35 + Math.random() * 0.55 + heat * 0.5;
+      s.velocity[ix + 2] = (Math.random() - 0.5) * (0.4 + heat * 0.3);
+      s.maxLife[i] = 0.55 + Math.random() * 0.6 + heat * 0.15;
+      size.array[i] = 0.026 + Math.random() * 0.04 + heat * 0.012;
     }
 
     s.life[i] = 1;
-    s.maxLife[i] = 0.5 + Math.random() * 0.65;
-    size.array[i] = 0.028 + Math.random() * 0.045;
     tint.array[i] = Math.random();
     size.needsUpdate = true;
     tint.needsUpdate = true;
@@ -132,37 +119,43 @@ export function SparkSystem({
   useFrame((state, delta) => {
     const s = sim.current;
     const dt = Math.min(delta, 0.05);
+    const control = controlRef.current;
+    const heat = control.heat;
     const position = geometry.attributes.position as THREE.BufferAttribute;
     const life = geometry.attributes.aLife as THREE.BufferAttribute;
-    const hit = hitRef.current;
 
-    if (hit.active) {
-      let budget = (16 + hit.speed * 30) * quality * dt + Math.random() * 0.5;
-      while (budget >= 1) {
-        budget -= 1;
-        spawn(hit.point, hit.normal, hit.speed);
-      }
-      if (Math.random() < budget) spawn(hit.point, hit.normal, hit.speed);
+    // Ambient embers from the flame's base — rate scales with heat.
+    const interval = 0.16 / (1 + heat * 2.4);
+    s.ambientClock += dt;
+    while (s.ambientClock >= interval) {
+      s.ambientClock -= interval;
+      s.tmp.set(
+        base.x + (Math.random() - 0.5) * 1.0,
+        base.y + (Math.random() - 0.5) * 0.3,
+        base.z + (Math.random() - 0.5) * 1.0
+      );
+      spawn(s.tmp, false);
     }
 
-    if (ambient) {
-      s.ambientClock += dt;
-      while (s.ambientClock >= 0.17) {
-        s.ambientClock -= 0.17;
+    // Click burst, drained a few sparks per frame (a short whoosh).
+    if (control.burst > 0) {
+      const n = Math.min(6, Math.floor(control.burst));
+      for (let i = 0; i < n; i++) {
         s.tmp.set(
-          ambient.x + (Math.random() - 0.5) * 0.9,
-          ambient.y + (Math.random() - 0.5) * 0.3,
-          ambient.z + (Math.random() - 0.5) * 0.9
+          base.x + (Math.random() - 0.5) * 0.7,
+          base.y + (Math.random() - 0.5) * 0.2,
+          base.z + (Math.random() - 0.5) * 0.7
         );
-        spawn(s.tmp, null, 0);
+        spawn(s.tmp, true);
       }
+      control.burst -= n;
     }
 
     for (let i = 0; i < MAX_SPARKS; i++) {
       if (s.life[i] <= 0) continue;
       s.life[i] = Math.max(0, s.life[i] - dt / s.maxLife[i]);
       const ix = i * 3;
-      s.velocity[ix + 1] -= 1.7 * dt; // sparks arc and fall
+      s.velocity[ix + 1] -= 1.7 * dt; // embers arc and fall
       const drag = Math.max(0, 1 - 1.5 * dt);
       s.velocity[ix] *= drag;
       s.velocity[ix + 1] *= drag;
